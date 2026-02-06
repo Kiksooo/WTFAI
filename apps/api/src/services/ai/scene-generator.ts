@@ -22,7 +22,8 @@ export async function generateSceneImage(scenePrompt: string): Promise<Buffer> {
     response_format: 'b64_json',
   });
 
-  const b64 = response.data[0]?.b64_json;
+  const first = response.data?.[0];
+  const b64 = first?.b64_json;
   if (!b64) throw new Error('No image in response');
   return Buffer.from(b64, 'base64');
 }
