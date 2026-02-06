@@ -10,7 +10,6 @@ interface GenerateScreenProps {
 export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
   const [prompt, setPrompt] = useState('');
   const [me, setMe] = useState<MeResponse | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,7 +59,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
           placeholder="If cats ruled the world…"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          disabled={limitReached}
+          disabled={!!limitReached}
           maxLength={500}
           autoFocus
         />
@@ -76,7 +75,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
         <button
           type="submit"
           className="btn-primary generate-btn"
-          disabled={!prompt.trim() || submitting || limitReached}
+          disabled={!prompt.trim() || submitting || !!limitReached}
         >
           {submitting ? 'Generating…' : 'Generate video'}
         </button>

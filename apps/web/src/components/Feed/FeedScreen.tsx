@@ -12,7 +12,7 @@ interface FeedScreenProps {
 
 export function FeedScreen({
   onNavigateGenerate,
-  onNavigateProfile,
+  onNavigateProfile: _onNavigateProfile,
 }: FeedScreenProps) {
   const { items, loadMore, hasMore } = useFeed();
   const { tg } = useTelegram();

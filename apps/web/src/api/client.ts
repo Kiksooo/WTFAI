@@ -5,9 +5,11 @@ function getInitData(): string {
   return tg?.initData ?? '';
 }
 
+type RequestOptions = Omit<RequestInit, 'body'> & { body?: unknown };
+
 async function request<T>(
   path: string,
-  options: RequestInit & { body?: unknown } = {}
+  options: RequestOptions = {}
 ): Promise<T> {
   const { body, ...rest } = options;
   const headers: Record<string, string> = {
