@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+*.db
+*.db-journal
+uploads/
+tmp/
+apps/api/uploads/
+apps/api/tmp/
+apps/web/dist/
+.DS_Store

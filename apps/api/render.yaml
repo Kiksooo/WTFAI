@@ -1,0 +1,19 @@
+# Деплой API: в Render создай Web Service, укажи Root Directory = apps/api
+# и скопируй сюда переменные из .env (DATABASE_URL, TELEGRAM_BOT_TOKEN и т.д.)
+services:
+  - type: web
+    name: wtfai-api
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: BASE_URL
+        sync: false

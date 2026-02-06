@@ -1,0 +1,272 @@
+.app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0f0f1a;
+}
+
+/* Feed */
+.feed-screen {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: 100%;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease-out;
+  height: 100%;
+}
+
+.feed-slide {
+  flex: 0 0 100%;
+  height: 100vh;
+  height: 100dvh;
+  position: relative;
+  overflow: hidden;
+}
+
+.reel-card {
+  position: absolute;
+  inset: 0;
+}
+
+.reel-card .video-player {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.reel-card-overlay {
+  position: absolute;
+  right: 12px;
+  bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 2;
+}
+
+.feed-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.feed-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.feed-action-icon {
+  font-size: 28px;
+}
+
+.feed-action-count {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.feed-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  color: #888;
+}
+
+/* Generate */
+.generate-screen {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+.screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.back-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.screen-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.generate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.generate-label {
+  font-size: 14px;
+  color: #aaa;
+}
+
+.generate-input {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 16px;
+  color: #fff;
+}
+
+.generate-input::placeholder {
+  color: #666;
+}
+
+.generate-limit {
+  font-size: 14px;
+  color: #888;
+}
+
+.generate-limit-warn {
+  font-size: 14px;
+  color: #f59e0b;
+}
+
+.generate-error {
+  font-size: 14px;
+  color: #ef4444;
+}
+
+.generate-btn {
+  margin-top: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+}
+
+.generate-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Profile */
+.profile-screen {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  padding-bottom: 80px;
+}
+
+.profile-loading,
+.profile-error,
+.profile-empty {
+  text-align: center;
+  color: #888;
+  padding: 24px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.profile-card {
+  aspect-ratio: 9 / 16;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #1a1a2e;
+  position: relative;
+}
+
+.profile-card-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-card-stats {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  font-size: 12px;
+  display: flex;
+  gap: 12px;
+}
+
+/* Buttons */
+.btn-primary {
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:active {
+  opacity: 0.9;
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(15, 15, 26, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.nav-btn {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.nav-btn.active {
+  color: #8b5cf6;
+}

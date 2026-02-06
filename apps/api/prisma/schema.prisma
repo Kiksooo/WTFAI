@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     BigInt   @id
+  username               String?
+  firstName              String?
+  isPremium              Boolean  @default(false)
+  dailyGenerationsUsed   Int      @default(0)
+  lastGenerationResetAt  DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  videos                 Video[]
+  likes                  Like[]
+}
+
+model Video {
+  id          String   @id @default(cuid())
+  prompt      String
+  videoUrl    String
+  previewUrl  String?
+  likesCount  Int      @default(0)
+  viewsCount  Int      @default(0)
+  createdById BigInt
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  likes       Like[]
+}
+
+model Like {
+  userId   BigInt
+  videoId  String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video    Video  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  @@id([userId, videoId])
+}
+
+model GenerationJob {
+  id        String   @id @default(cuid())
+  userId    BigInt
+  prompt    String
+  status    String   // queued | processing | done | failed
+  videoId   String?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
