@@ -14,6 +14,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const [payPrompt, setPayPrompt] = useState('');
   const [paying, setPaying] = useState(false);
   const [payJobId, setPayJobId] = useState<string | null>(null);
+  const [subPaying, setSubPaying] = useState<'basic' | 'vip' | null>(null);
 
   useEffect(() => {
     Promise.all([api.getMe(), api.getMyVideos()])
@@ -38,6 +39,24 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
     }, 3000);
     return () => clearInterval(t);
   }, [payJobId]);
+
+  const handleSubscriptionPay = async (plan: 'basic' | 'vip') => {
+    setSubPaying(plan);
+    setError(null);
+    try {
+      const res = await api.createSubscriptionInvoice(plan);
+      const tg = (window as unknown as { Telegram?: { WebApp?: { openInvoice: (url: string) => void } } }).Telegram?.WebApp;
+      if (tg?.openInvoice) tg.openInvoice(res.invoiceUrl);
+      else window.open(res.invoiceUrl, '_blank');
+      setTimeout(() => {
+        api.getMe().then(setMe).catch(() => {});
+        setSubPaying(null);
+      }, 8000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка');
+      setSubPaying(null);
+    }
+  };
 
   const handlePayStars = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,10 +95,59 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             <div className="profile-avatar">👤</div>
             <h2 className="profile-name">{displayName}</h2>
             {me.isPremium && <span className="profile-badge">Premium</span>}
+            {(me.subscriptionPlan === 'basic' || me.subscriptionPlan === 'vip') && me.subscriptionExpiresAt && (
+              <span className="profile-badge profile-badge-sub">
+                {me.subscriptionPlan === 'vip' ? 'VIP' : 'Basic'} до {new Date(me.subscriptionExpiresAt).toLocaleDateString()}
+              </span>
+            )}
             <p className="profile-stats">
-              Генераций сегодня: {me.dailyGenerationsUsed} / {me.dailyLimit}
+              {me.monthlyLimit != null
+                ? `Видео в этом месяце: ${me.monthlyGenerationsUsed ?? 0} / ${me.monthlyLimit}`
+                : `Генераций сегодня: ${me.dailyGenerationsUsed} / ${me.dailyLimit}`}
             </p>
           </section>
+
+          {me.subscriptionPlans && (
+            <section className="profile-subscription-section">
+              <h3 className="profile-section-title">Подписки</h3>
+              <div className="profile-sub-cards">
+                <div className="profile-sub-card">
+                  <h4>Basic — $9.99/мес</h4>
+                  <ul>
+                    <li>50–100 видео в месяц</li>
+                    <li>Без watermark</li>
+                    <li>Приоритетная очередь</li>
+                    <li>Эксклюзивные шаблоны</li>
+                  </ul>
+                  <button
+                    type="button"
+                    className="btn-primary profile-sub-btn"
+                    disabled={!!subPaying}
+                    onClick={() => handleSubscriptionPay('basic')}
+                  >
+                    {subPaying === 'basic' ? 'Открываем оплату…' : `Оплатить ${me.subscriptionPlans.basic.priceStars} звёзд`}
+                  </button>
+                </div>
+                <div className="profile-sub-card profile-sub-card-vip">
+                  <h4>VIP — $19.99/мес</h4>
+                  <ul>
+                    <li>300 видео в месяц</li>
+                    <li>Максимальное качество</li>
+                    <li>Приватные генерации</li>
+                    <li>Early access к форматам</li>
+                  </ul>
+                  <button
+                    type="button"
+                    className="btn-primary profile-sub-btn"
+                    disabled={!!subPaying}
+                    onClick={() => handleSubscriptionPay('vip')}
+                  >
+                    {subPaying === 'vip' ? 'Открываем оплату…' : `Оплатить ${me.subscriptionPlans.vip.priceStars} звёзд`}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="profile-stars-section">
             <h3 className="profile-section-title">Оплата звёздами Telegram</h3>

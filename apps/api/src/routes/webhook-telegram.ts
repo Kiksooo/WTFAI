@@ -60,8 +60,23 @@ export const webhookTelegramRoutes: FastifyPluginAsync = async (app) => {
 
     if (body.pre_checkout_query) {
       const q = body.pre_checkout_query;
+      const payload = q.invoice_payload;
+
+      if (payload.startsWith('sub:')) {
+        const intentId = payload.slice(4);
+        const intent = await prisma.subscriptionIntent.findUnique({
+          where: { id: intentId },
+        });
+        if (!intent) {
+          await answerPreCheckoutQuery(q.id, false, 'Subscription offer expired. Try again.');
+          return reply.send({ ok: true });
+        }
+        await answerPreCheckoutQuery(q.id, true);
+        return reply.send({ ok: true });
+      }
+
       const job = await prisma.generationJob.findFirst({
-        where: { id: q.invoice_payload, status: 'awaiting_payment' },
+        where: { id: payload, status: 'awaiting_payment' },
       });
       if (!job) {
         await answerPreCheckoutQuery(q.id, false, 'This order is no longer valid. Please try again.');
@@ -73,10 +88,32 @@ export const webhookTelegramRoutes: FastifyPluginAsync = async (app) => {
 
     if (body.message?.successful_payment) {
       const pay = body.message.successful_payment;
-      const jobId = pay.invoice_payload;
+      const payload = pay.invoice_payload;
       const chargeId = pay.telegram_payment_charge_id ?? '';
       const amountStars = Number(pay.total_amount) || 1;
 
+      if (payload.startsWith('sub:')) {
+        const intentId = payload.slice(4);
+        const intent = await prisma.subscriptionIntent.findUnique({
+          where: { id: intentId },
+        });
+        if (intent) {
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 30);
+          await prisma.user.update({
+            where: { id: intent.userId },
+            data: {
+              subscriptionPlan: intent.plan,
+              subscriptionExpiresAt: expiresAt,
+              monthlyGenerationsUsed: 0,
+            },
+          });
+          await prisma.subscriptionIntent.delete({ where: { id: intentId } }).catch(() => {});
+        }
+        return reply.send({ ok: true });
+      }
+
+      const jobId = payload;
       const job = await prisma.generationJob.findUnique({
         where: { id: jobId },
       });
@@ -100,7 +137,7 @@ export const webhookTelegramRoutes: FastifyPluginAsync = async (app) => {
             },
           });
         } catch {
-          // дубликат оплаты (уже есть запись с таким charge_id) — игнорируем
+          // дубликат оплаты — игнорируем
         }
       }
 

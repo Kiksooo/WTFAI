@@ -26,6 +26,21 @@ export interface MeResponse {
   dailyGenerationsUsed: number;
   dailyLimit: number;
   starsPerGeneration?: number;
+  subscriptionPlan?: string;
+  subscriptionExpiresAt?: string | null;
+  monthlyGenerationsUsed?: number;
+  monthlyLimit?: number | null;
+  subscriptionPlans?: {
+    basic: { monthlyVideos: number; priceStars: number };
+    vip: { monthlyVideos: number; priceStars: number };
+  };
+}
+
+export interface SubscriptionInvoiceResponse {
+  intentId: string;
+  invoiceUrl: string;
+  starsAmount: number;
+  plan: string;
 }
 
 export interface PaymentInvoiceResponse {

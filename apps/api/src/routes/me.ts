@@ -43,9 +43,15 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const dailyLimit = dbUser.isPremium
-        ? config.dailyLimitPremium
-        : config.dailyLimitFree;
+      const now = new Date();
+      const hasActiveSubscription =
+        dbUser.subscriptionExpiresAt && new Date(dbUser.subscriptionExpiresAt) > now
+        && (dbUser.subscriptionPlan === 'basic' || dbUser.subscriptionPlan === 'vip');
+
+      const dailyLimit = dbUser.isPremium ? config.dailyLimitPremium : config.dailyLimitFree;
+      const monthlyLimit = hasActiveSubscription
+        ? (dbUser.subscriptionPlan === 'vip' ? config.vipMonthlyVideos : config.basicMonthlyVideos)
+        : null;
 
       return reply.send({
         id: String(dbUser.id),
@@ -55,6 +61,14 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
         dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
         dailyLimit,
         starsPerGeneration: config.paymentStarsPerGeneration,
+        subscriptionPlan: dbUser.subscriptionPlan,
+        subscriptionExpiresAt: dbUser.subscriptionExpiresAt?.toISOString() ?? null,
+        monthlyGenerationsUsed: dbUser.monthlyGenerationsUsed,
+        monthlyLimit,
+        subscriptionPlans: {
+          basic: { monthlyVideos: config.basicMonthlyVideos, priceStars: config.basicPriceStars },
+          vip: { monthlyVideos: config.vipMonthlyVideos, priceStars: config.vipPriceStars },
+        },
       });
     } catch (err: unknown) {
       request.log.error(err);

@@ -79,6 +79,12 @@ export const api = {
       body: { prompt },
     }),
 
+  createSubscriptionInvoice: (plan: 'basic' | 'vip') =>
+    request<import('../types').SubscriptionInvoiceResponse>('/payment/create-subscription-invoice', {
+      method: 'POST',
+      body: { plan },
+    }),
+
   getJob: (jobId: string) =>
     request<import('../types').JobResponse>(`/job/${jobId}`),
 

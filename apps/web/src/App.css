@@ -232,6 +232,50 @@
   margin: 0;
 }
 
+.profile-badge-sub {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.profile-subscription-section {
+  margin-bottom: 24px;
+}
+
+.profile-sub-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-sub-card {
+  padding: 16px;
+  background: #1a1a2e;
+  border-radius: 14px;
+  border: 1px solid #333;
+}
+
+.profile-sub-card-vip {
+  border-color: rgba(234, 179, 8, 0.4);
+  background: linear-gradient(180deg, rgba(234, 179, 8, 0.08), #1a1a2e);
+}
+
+.profile-sub-card h4 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.profile-sub-card ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #a0a0a0;
+  line-height: 1.5;
+}
+
+.profile-sub-btn {
+  width: 100%;
+}
+
 .profile-stars-section,
 .profile-videos-section {
   margin-bottom: 24px;

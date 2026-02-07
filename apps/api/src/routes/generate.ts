@@ -51,18 +51,40 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const dailyLimit = dbUser.isPremium
-      ? config.dailyLimitPremium
-      : config.dailyLimitFree;
+    const now = new Date();
+    const hasActiveSubscription =
+      dbUser.subscriptionExpiresAt && new Date(dbUser.subscriptionExpiresAt) > now
+      && (dbUser.subscriptionPlan === 'basic' || dbUser.subscriptionPlan === 'vip');
 
-    if (dbUser.dailyGenerationsUsed >= dailyLimit) {
-      return reply.status(429).send({
-        error: 'Daily limit reached',
-        dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
-        dailyLimit,
-        requiresPayment: true,
-        starsAmount: config.paymentStarsPerGeneration,
-      });
+    let limit: number;
+    let used: number;
+    let updateData: { dailyGenerationsUsed?: number; monthlyGenerationsUsed?: number };
+
+    if (hasActiveSubscription) {
+      limit = dbUser.subscriptionPlan === 'vip' ? config.vipMonthlyVideos : config.basicMonthlyVideos;
+      used = dbUser.monthlyGenerationsUsed;
+      if (used >= limit) {
+        return reply.status(429).send({
+          error: 'Monthly subscription limit reached',
+          monthlyGenerationsUsed: used,
+          monthlyLimit: limit,
+          subscriptionPlan: dbUser.subscriptionPlan,
+        });
+      }
+      updateData = { monthlyGenerationsUsed: dbUser.monthlyGenerationsUsed + 1 };
+    } else {
+      limit = dbUser.isPremium ? config.dailyLimitPremium : config.dailyLimitFree;
+      used = dbUser.dailyGenerationsUsed;
+      if (used >= limit) {
+        return reply.status(429).send({
+          error: 'Daily limit reached',
+          dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
+          dailyLimit: limit,
+          requiresPayment: true,
+          starsAmount: config.paymentStarsPerGeneration,
+        });
+      }
+      updateData = { dailyGenerationsUsed: dbUser.dailyGenerationsUsed + 1 };
     }
 
     const job = await prisma.generationJob.create({
@@ -75,7 +97,7 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
 
     await prisma.user.update({
       where: { id: BigInt(user.id) },
-      data: { dailyGenerationsUsed: dbUser.dailyGenerationsUsed + 1 },
+      data: updateData,
     });
 
     enqueueVideoJob({
