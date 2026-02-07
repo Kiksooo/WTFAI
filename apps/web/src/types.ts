@@ -20,9 +20,18 @@ export interface FeedResponse {
 
 export interface MeResponse {
   id: string;
+  firstName: string | null;
+  username: string | null;
   isPremium: boolean;
   dailyGenerationsUsed: number;
   dailyLimit: number;
+  starsPerGeneration?: number;
+}
+
+export interface PaymentInvoiceResponse {
+  jobId: string;
+  invoiceUrl: string;
+  starsAmount: number;
 }
 
 export interface GenerateResponse {
@@ -32,7 +41,7 @@ export interface GenerateResponse {
 
 export interface JobResponse {
   jobId: string;
-  status: 'queued' | 'processing' | 'done' | 'failed';
+  status: 'awaiting_payment' | 'queued' | 'processing' | 'done' | 'failed';
   videoId?: string;
   error?: string;
 }

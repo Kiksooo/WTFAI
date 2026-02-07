@@ -73,6 +73,12 @@ export const api = {
       body: { prompt },
     }),
 
+  createPaymentInvoice: (prompt: string) =>
+    request<import('../types').PaymentInvoiceResponse>('/payment/create-invoice', {
+      method: 'POST',
+      body: { prompt },
+    }),
+
   getJob: (jobId: string) =>
     request<import('../types').JobResponse>(`/job/${jobId}`),
 

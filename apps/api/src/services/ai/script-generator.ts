@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { config } from '../../config.js';
+import { config, isOpenAIKeyValid, isGroqKeyValid } from '../../config.js';
+import { isQuotaOrAuthError } from './errors.js';
 import type { Scene } from './types.js';
 
 const SYSTEM_PROMPT = `You are a writer for short funny "What if" video clips (7–15 seconds total).
@@ -10,33 +11,58 @@ Given a user idea, output a JSON array of 3–5 scenes. Each scene must have:
 Total duration must be 7–15 seconds. Tone: light, humorous, no preaching.
 Output ONLY valid JSON array, no markdown, no code block.`;
 
-export async function generateScript(prompt: string): Promise<Scene[]> {
-  if (!config.openaiApiKey) {
-    return getMockScenes(prompt);
-  }
-
-  const openai = new OpenAI({ apiKey: config.openaiApiKey });
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.8,
-  });
-
-  const content = completion.choices[0]?.message?.content?.trim();
-  if (!content) throw new Error('Empty script response');
-
+function parseScriptResponse(content: string): Scene[] {
   const json = content.replace(/^```\w*\n?|\n?```$/g, '').trim();
   const parsed = JSON.parse(json) as unknown;
   if (!Array.isArray(parsed)) throw new Error('Script must be an array');
-
   return parsed.map((s: Record<string, unknown>) => ({
     text: String(s.text ?? ''),
     durationSec: Number(s.durationSec ?? 2),
     visual: String(s.visual ?? ''),
   })) as Scene[];
+}
+
+export async function generateScript(prompt: string): Promise<Scene[]> {
+  if (isOpenAIKeyValid()) {
+    try {
+      const openai = new OpenAI({ apiKey: config.openaiApiKey });
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.8,
+      });
+      const content = completion.choices[0]?.message?.content?.trim();
+      if (content) return parseScriptResponse(content);
+    } catch (err: unknown) {
+      if (!isQuotaOrAuthError(err)) throw err;
+    }
+  }
+
+  if (isGroqKeyValid()) {
+    try {
+      const groq = new OpenAI({
+        apiKey: config.groqApiKey,
+        baseURL: 'https://api.groq.com/openai/v1',
+      });
+      const completion = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.8,
+      });
+      const content = completion.choices[0]?.message?.content?.trim();
+      if (content) return parseScriptResponse(content);
+    } catch (err: unknown) {
+      if (!isQuotaOrAuthError(err)) throw err;
+    }
+  }
+
+  return getMockScenes(prompt);
 }
 
 function getMockScenes(prompt: string): Scene[] {

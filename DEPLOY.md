@@ -18,9 +18,14 @@
 5. **Variables** — добавь переменные из своего `apps/api/.env`:
    - `DATABASE_URL` = `file:./data/dev.db` (для Railway лучше потом перейти на PostgreSQL)
    - `TELEGRAM_BOT_TOKEN` = твой токен от BotFather
-   - `OPENAI_API_KEY` = (по желанию)
+   - `OPENAI_API_KEY` = (по желанию; если нет — можно использовать бесплатные ключи ниже)
+   - `GROQ_API_KEY` = (опционально, бесплатный тир: [console.groq.com](https://console.groq.com) — для сценариев)
+   - `REPLICATE_API_TOKEN` = (опционально, бесплатный старт: [replicate.com](https://replicate.com) — для картинок)
    - `BASE_URL` = **сюда потом подставишь URL этого сервиса** (например `https://wtfai-api-production.up.railway.app`)
-6. Сохрани и дождись деплоя. Скопируй **публичный URL** сервиса (например `https://xxx.up.railway.app`). Это твой **API URL**.
+   - `PAYMENT_STARS_PER_GENERATION` = (опционально, по умолчанию 5 — сколько звёзд за одну генерацию)
+   - `TELEGRAM_WEBHOOK_SECRET` = (опционально, секрет для проверки webhook; задай при настройке setWebhook)
+6. Сохрани и дождись деплоя. Скопируй **публичный URL** сервиса — он будет вида **`https://имя-сервиса.up.railway.app`** (например `https://wtfai-api-production.up.railway.app`). Это твой **API URL**.
+7. **Оплата звёздами:** чтобы пользователи могли платить за генерации, настрой webhook для бота (см. раздел «Оплата звёздами» ниже).
 
 ### Вариант B: Render
 
@@ -63,11 +68,42 @@
 
 ---
 
+## Админка
+
+Админка доступна по адресу **URL фронта** + `/admin` (например `https://wtfai-xxx.vercel.app/admin`).
+
+1. В **API** (Railway/Render) добавь переменную **ADMIN_SECRET** — любой длинный секретный ключ (например сгенерируй: `openssl rand -hex 24`).
+2. Открой в браузере `https://твой-фронт.vercel.app/admin`.
+3. Введи **URL API** — если API на Railway, это адрес вида `https://твой-сервис.up.railway.app` — и **ключ админки** (значение `ADMIN_SECRET`).
+4. Нажми «Войти». В админке отображаются: сводка (пользователи, видео, джобы, платежи, звёзды), таблицы пользователей, видео, джобов и платежей.
+
+Без переменной **ADMIN_SECRET** админка отключена (API возвращает 503 на запросы к `/admin/*`).
+
+---
+
 ## Шаг 4. Открыть продукт в Telegram
 
 1. Открой своего бота в Telegram.
 2. Нажми кнопку меню (слева от поля ввода) или кнопку **Open App**.
 3. Откроется твоя Mini App — можно смотреть ленту, создавать видео, профиль.
+
+---
+
+## Оплата звёздами (Telegram Stars)
+
+Когда у пользователя заканчивается бесплатный лимит генераций, он может оплатить звёздами и создать ещё одно видео.
+
+1. После деплоя API вызови **setWebhook**, чтобы Telegram присылал события оплаты на твой сервер:
+   ```bash
+   curl -X POST "https://api.telegram.org/bot<ТВОЙ_ТОКЕН>/setWebhook" \
+     -H "Content-Type: application/json" \
+     -d '{"url":"https://ТВОЙ_API_URL/webhook/telegram"}'
+   ```
+   Вместо `<ТВОЙ_ТОКЕН>` и `https://ТВОЙ_API_URL` подставь токен бота и URL API (из шага 1).
+2. Опционально: задай секрет, чтобы только твой сервер принимал webhook:
+   - В Variables API добавь `TELEGRAM_WEBHOOK_SECRET` = случайная строка.
+   - В setWebhook добавь в JSON: `"secret_token":"та_же_строка"`.
+3. Цена за одну генерацию задаётся в `PAYMENT_STARS_PER_GENERATION` (по умолчанию 5 звёзд).
 
 ---
 

@@ -11,9 +11,10 @@ export const likeRoutes: FastifyPluginAsync = async (app) => {
     const user = request.telegramUser;
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
-    const body = bodySchema.parse(request.body ?? {});
+    try {
+      const body = bodySchema.parse(request.body ?? {});
 
-    const video = await prisma.video.findUnique({
+      const video = await prisma.video.findUnique({
       where: { id: body.videoId },
     });
     if (!video) return reply.status(404).send({ error: 'Video not found' });
@@ -31,7 +32,8 @@ export const likeRoutes: FastifyPluginAsync = async (app) => {
         where: { id: body.videoId },
         data: { likesCount: { decrement: 1 } },
       });
-      return reply.send({ likesCount: updated.likesCount, liked: false });
+      const safeCount = Math.max(0, updated.likesCount);
+      return reply.send({ likesCount: safeCount, liked: false });
     } else {
       await prisma.like.create({
         data: { userId, videoId: body.videoId },
@@ -42,5 +44,9 @@ export const likeRoutes: FastifyPluginAsync = async (app) => {
       });
       return reply.send({ likesCount: updated.likesCount, liked: true });
     }
+  } catch (err: unknown) {
+    request.log.error(err);
+    return reply.status(500).send({ error: 'Failed to update like' });
+  }
   });
 };

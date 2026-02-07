@@ -66,7 +66,28 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim() || submitting) return;
-    if (me && me.dailyGenerationsUsed >= me.dailyLimit) return;
+    const limitReached = me && me.dailyGenerationsUsed >= me.dailyLimit;
+
+    if (limitReached) {
+      setSubmitting(true);
+      setError(null);
+      setJobStatus(null);
+      try {
+        const res = await api.createPaymentInvoice(prompt.trim());
+        setJobId(res.jobId);
+        const tg = (window as unknown as { Telegram?: { WebApp?: { openInvoice: (url: string) => void } } }).Telegram?.WebApp;
+        if (tg?.openInvoice) {
+          tg.openInvoice(res.invoiceUrl);
+        } else {
+          window.open(res.invoiceUrl, '_blank');
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed');
+        setSubmitting(false);
+      }
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     setJobStatus(null);
@@ -80,6 +101,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
   };
 
   const limitReached = me && me.dailyGenerationsUsed >= me.dailyLimit;
+  const starsAmount = me?.starsPerGeneration ?? 5;
 
   return (
     <div className="generate-screen">
@@ -111,11 +133,14 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
           </p>
         )}
         {limitReached && (
-          <p className="generate-limit-warn">Come back tomorrow or upgrade</p>
+          <p className="generate-limit-warn">
+            Лимит на сегодня исчерпан. Оплати {starsAmount} звёзд и создай ещё одно видео.
+          </p>
         )}
         {error && <p className="generate-error">{error}</p>}
         {jobId && jobStatus && (
           <p className="generate-status">
+            {jobStatus === 'awaiting_payment' && 'Ожидаем оплату…'}
             {jobStatus === 'queued' && 'В очереди…'}
             {jobStatus === 'processing' && 'Генерируем видео…'}
           </p>
@@ -123,9 +148,19 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
         <button
           type="submit"
           className="btn-primary generate-btn"
-          disabled={!prompt.trim() || submitting || !!limitReached}
+          disabled={!prompt.trim() || submitting}
         >
-          {submitting && !jobId ? 'Отправка…' : submitting ? 'Генерация…' : 'Generate video'}
+          {limitReached
+            ? submitting && !jobId
+              ? 'Создаём инвойс…'
+              : submitting
+                ? 'Генерация…'
+                : `Оплатить ${starsAmount} звёзд и создать`
+            : submitting && !jobId
+              ? 'Отправка…'
+              : submitting
+                ? 'Генерация…'
+                : 'Create video'}
         </button>
       </form>
     </div>

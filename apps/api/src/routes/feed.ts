@@ -11,34 +11,42 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: z.infer<typeof querySchema>;
   }>('/', async (request, reply) => {
-    const q = querySchema.parse(request.query);
-    const videos = await prisma.video.findMany({
-      orderBy: { createdAt: 'desc' },
-      skip: q.offset,
-      take: q.limit,
-      include: {
-        createdBy: {
-          select: { id: true, username: true, firstName: true },
+    try {
+      const q = querySchema.parse(request.query);
+      const videos = await prisma.video.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip: q.offset,
+        take: q.limit,
+        include: {
+          createdBy: {
+            select: { id: true, username: true, firstName: true },
+          },
         },
-      },
-    });
-    const items = videos.map((v) => ({
-      id: v.id,
-      prompt: v.prompt,
-      videoUrl: v.videoUrl,
-      previewUrl: v.previewUrl,
-      likesCount: v.likesCount,
-      viewsCount: v.viewsCount,
-      createdAt: v.createdAt.toISOString(),
-      createdBy: v.createdBy
-        ? {
-            id: String(v.createdBy.id),
-            username: v.createdBy.username,
-            firstName: v.createdBy.firstName,
-          }
-        : undefined,
-    }));
-    const nextOffset = items.length === q.limit ? q.offset + q.limit : undefined;
-    return reply.send({ items, nextOffset });
+      });
+      const items = videos.map((v) => ({
+        id: v.id,
+        prompt: v.prompt,
+        videoUrl: v.videoUrl,
+        previewUrl: v.previewUrl,
+        likesCount: v.likesCount,
+        viewsCount: v.viewsCount,
+        createdAt: v.createdAt.toISOString(),
+        createdBy: v.createdBy
+          ? {
+              id: String(v.createdBy.id),
+              username: v.createdBy.username,
+              firstName: v.createdBy.firstName,
+            }
+          : undefined,
+      }));
+      const nextOffset = items.length === q.limit ? q.offset + q.limit : undefined;
+      return reply.send({ items, nextOffset });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'ZodError') {
+        return reply.status(400).send({ error: 'Invalid query' });
+      }
+      request.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load feed' });
+    }
   });
 };

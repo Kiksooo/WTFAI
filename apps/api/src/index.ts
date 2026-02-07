@@ -11,6 +11,9 @@ import { likeRoutes } from './routes/like.js';
 import { meRoutes } from './routes/me.js';
 import { myVideosRoutes } from './routes/my-videos.js';
 import { jobRoutes } from './routes/job.js';
+import { paymentRoutes } from './routes/payment.js';
+import { webhookTelegramRoutes } from './routes/webhook-telegram.js';
+import { adminRoutes } from './routes/admin.js';
 
 // Применить схему БД при старте (создать таблицы, если их нет)
 try {
@@ -44,8 +47,19 @@ await app.register(likeRoutes, { prefix: '/like' });
 await app.register(myVideosRoutes, { prefix: '/my-videos' });
 await app.register(meRoutes, { prefix: '/me' });
 await app.register(jobRoutes, { prefix: '/job' });
+await app.register(paymentRoutes, { prefix: '/payment' });
+await app.register(webhookTelegramRoutes, { prefix: '/webhook' });
+await app.register(adminRoutes, { prefix: '/admin' });
 
 app.get('/health', async () => ({ ok: true }));
+
+app.get('/', async (_request, reply) => {
+  return reply.send({
+    name: 'WTFAI API',
+    health: '/health',
+    admin: '/admin/* (X-Admin-Key required)',
+  });
+});
 
 try {
   await app.listen({ port: config.port, host: '0.0.0.0' });

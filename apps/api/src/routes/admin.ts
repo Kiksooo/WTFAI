@@ -1,0 +1,224 @@
+import { FastifyPluginAsync } from 'fastify';
+import { config } from '../config.js';
+import { prisma } from '../db/index.js';
+
+function getAdminKey(headers: Record<string, string | string[] | undefined>): string {
+  const v = headers['x-admin-key'] ?? headers['x-admin-key'.toLowerCase()];
+  return Array.isArray(v) ? v[0] ?? '' : v ?? '';
+}
+
+function checkAdmin(request: { headers: Record<string, string | string[] | undefined> }, reply: { status: (code: number) => { send: (body: object) => void } }): boolean {
+  if (!config.adminSecret) {
+    reply.status(503).send({ error: 'Admin panel disabled (ADMIN_SECRET not set)' });
+    return true;
+  }
+  const key = getAdminKey(request.headers);
+  if (key !== config.adminSecret) {
+    reply.status(401).send({ error: 'Invalid or missing X-Admin-Key' });
+    return true;
+  }
+  return false;
+}
+
+export const adminRoutes: FastifyPluginAsync = async (app) => {
+  app.addHook('preHandler', async (request, reply) => {
+    if (checkAdmin(request, reply)) return;
+  });
+
+  /** Сводка по проекту */
+  app.get('/stats', async (_request, reply) => {
+    try {
+      const [usersCount, videosCount, jobsCount, paymentsCount] = await Promise.all([
+        prisma.user.count(),
+        prisma.video.count(),
+        prisma.generationJob.count(),
+        prisma.payment.count(),
+      ]);
+
+      const jobsByStatus = await prisma.generationJob.groupBy({
+        by: ['status'],
+        _count: { id: true },
+      });
+
+      const totalStars = await prisma.payment.aggregate({
+        _sum: { amountStars: true },
+      });
+
+      const recentVideos = await prisma.video.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: { createdBy: { select: { id: true, username: true, firstName: true } } },
+      });
+
+      const recentPayments = await prisma.payment.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return reply.send({
+        usersCount,
+        videosCount,
+        jobsCount,
+        paymentsCount,
+        totalStars: totalStars._sum.amountStars ?? 0,
+        jobsByStatus: Object.fromEntries(jobsByStatus.map((s) => [s.status, s._count.id])),
+        recentVideos: recentVideos.map((v) => ({
+          id: v.id,
+          prompt: v.prompt,
+          videoUrl: v.videoUrl,
+          likesCount: v.likesCount,
+          createdAt: v.createdAt.toISOString(),
+          createdBy: v.createdBy ? { id: String(v.createdBy.id), username: v.createdBy.username, firstName: v.createdBy.firstName } : null,
+        })),
+        recentPayments: recentPayments.map((p) => ({
+          id: p.id,
+          userId: String(p.userId),
+          jobId: p.jobId,
+          amountStars: p.amountStars,
+          createdAt: p.createdAt.toISOString(),
+        })),
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load stats' });
+    }
+  });
+
+  /** Список пользователей */
+  app.get<{ Querystring: { limit?: string; offset?: string } }>('/users', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+          include: { _count: { select: { videos: true } } },
+        }),
+        prisma.user.count(),
+      ]);
+      return reply.send({
+        items: users.map((u) => ({
+          id: String(u.id),
+          username: u.username,
+          firstName: u.firstName,
+          isPremium: u.isPremium,
+          dailyGenerationsUsed: u.dailyGenerationsUsed,
+          videosCount: u._count.videos,
+          createdAt: u.createdAt.toISOString(),
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load users' });
+    }
+  });
+
+  /** Список видео */
+  app.get<{ Querystring: { limit?: string; offset?: string } }>('/videos', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const [videos, total] = await Promise.all([
+        prisma.video.findMany({
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+          include: { createdBy: { select: { id: true, username: true, firstName: true } } },
+        }),
+        prisma.video.count(),
+      ]);
+      return reply.send({
+        items: videos.map((v) => ({
+          id: v.id,
+          prompt: v.prompt,
+          videoUrl: v.videoUrl,
+          previewUrl: v.previewUrl,
+          likesCount: v.likesCount,
+          viewsCount: v.viewsCount,
+          createdAt: v.createdAt.toISOString(),
+          createdBy: v.createdBy ? { id: String(v.createdBy.id), username: v.createdBy.username, firstName: v.createdBy.firstName } : null,
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load videos' });
+    }
+  });
+
+  /** Список джобов */
+  app.get<{ Querystring: { limit?: string; offset?: string; status?: string } }>('/jobs', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const status = request.query.status?.trim() || undefined;
+      const where = status ? { status } : {};
+      const [jobs, total] = await Promise.all([
+        prisma.generationJob.findMany({
+          where,
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.generationJob.count({ where }),
+      ]);
+      return reply.send({
+        items: jobs.map((j) => ({
+          id: j.id,
+          userId: String(j.userId),
+          prompt: j.prompt,
+          status: j.status,
+          videoId: j.videoId,
+          error: j.error,
+          createdAt: j.createdAt.toISOString(),
+          updatedAt: j.updatedAt.toISOString(),
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load jobs' });
+    }
+  });
+
+  /** Список платежей */
+  app.get<{ Querystring: { limit?: string; offset?: string } }>('/payments', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const [payments, total] = await Promise.all([
+        prisma.payment.findMany({
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.payment.count(),
+      ]);
+      return reply.send({
+        items: payments.map((p) => ({
+          id: p.id,
+          userId: String(p.userId),
+          jobId: p.jobId,
+          amountStars: p.amountStars,
+          telegramPaymentChargeId: p.telegramPaymentChargeId,
+          createdAt: p.createdAt.toISOString(),
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load payments' });
+    }
+  });
+};

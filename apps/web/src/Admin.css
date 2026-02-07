@@ -1,0 +1,231 @@
+.admin {
+  min-height: 100vh;
+  background: #0f0f1a;
+  color: #e0e0e0;
+  padding: 20px;
+  padding-bottom: 40px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.admin-header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.admin-logout {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-logout:hover {
+  background: #222;
+  color: #fff;
+}
+
+.admin-login {
+  max-width: 400px;
+  margin: 60px auto 0;
+  padding: 32px;
+  background: #1a1a2e;
+  border-radius: 16px;
+}
+
+.admin-login h1 {
+  margin: 0 0 24px;
+  font-size: 24px;
+  text-align: center;
+}
+
+.admin-login label {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #a0a0a0;
+}
+
+.admin-login input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #0f0f1a;
+  color: #fff;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.admin-login .admin-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-error {
+  color: #f87171;
+  font-size: 14px;
+  margin: 12px 0 0;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.admin-tabs button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #333;
+  background: #1a1a2e;
+  color: #a0a0a0;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.admin-tabs button.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border-color: transparent;
+}
+
+.admin-section {
+  margin-bottom: 32px;
+}
+
+.admin-section h2 {
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+
+.admin-section h3 {
+  font-size: 16px;
+  margin: 24px 0 12px;
+  color: #a0a0a0;
+}
+
+.admin-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.admin-card {
+  padding: 20px;
+  background: #1a1a2e;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.admin-card-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.admin-card-label {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.admin-pre {
+  background: #1a1a2e;
+  padding: 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 13px;
+  margin: 0;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #222;
+}
+
+.admin-table th {
+  background: #1a1a2e;
+  color: #888;
+  font-weight: 600;
+}
+
+.admin-table tbody tr:hover {
+  background: #1a1a2e;
+}
+
+.admin-table code {
+  font-size: 12px;
+  background: #222;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.admin-code-small {
+  font-size: 11px;
+}
+
+.admin-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-status-done {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.admin-status-processing,
+.admin-status-queued {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.admin-status-failed {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.admin-status-awaiting_payment {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}

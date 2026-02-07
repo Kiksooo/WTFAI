@@ -49,9 +49,12 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
 
       return reply.send({
         id: String(dbUser.id),
+        firstName: dbUser.firstName ?? null,
+        username: dbUser.username ?? null,
         isPremium: dbUser.isPremium,
         dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
         dailyLimit,
+        starsPerGeneration: config.paymentStarsPerGeneration,
       });
     } catch (err: unknown) {
       request.log.error(err);

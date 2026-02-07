@@ -8,10 +8,38 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? 'file:./dev.db',
   botToken: process.env.TELEGRAM_BOT_TOKEN ?? '',
   openaiApiKey: process.env.OPENAI_API_KEY ?? '',
+  /** Groq — бесплатный тир для сценариев (Llama). Опционально, если нет OpenAI. */
+  groqApiKey: process.env.GROQ_API_KEY ?? '',
+  /** Replicate — бесплатный старт для картинок (SDXL). Опционально, если нет OpenAI. */
+  replicateApiToken: process.env.REPLICATE_API_TOKEN ?? '',
   storagePath: process.env.STORAGE_PATH ?? './uploads',
   baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
   dailyLimitFree: parseInt(process.env.DAILY_LIMIT_FREE ?? '2', 10),
   dailyLimitPremium: parseInt(process.env.DAILY_LIMIT_PREMIUM ?? '20', 10),
+  /** Оплата звёздами: сколько звёзд за одну генерацию (Telegram Stars, XTR) */
+  paymentStarsPerGeneration: parseInt(process.env.PAYMENT_STARS_PER_GENERATION ?? '5', 10),
+  /** Секрет для проверки webhook от Telegram (X-Telegram-Bot-Api-Secret-Token). Задай при настройке setWebhook. */
+  webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? '',
   /** В dev: пропускать проверку Telegram, подставлять тестового пользователя (только для локальной разработки) */
   devSkipTelegramAuth: process.env.DEV_SKIP_TELEGRAM_AUTH === 'true',
+  /** Секрет для доступа к админке (заголовок X-Admin-Key). Если пусто — админка отключена. */
+  adminSecret: process.env.ADMIN_SECRET ?? '',
 } as const;
+
+/** Использовать OpenAI только если ключ задан и не плейсхолдер (your_openai_key и т.п.) */
+export function isOpenAIKeyValid(): boolean {
+  const k = (config.openaiApiKey ?? '').trim();
+  return k.length > 20 && !/^your_ope|^sk-xxx|placeholder/i.test(k);
+}
+
+/** Groq — бесплатный тир; использовать для сценариев, если нет OpenAI */
+export function isGroqKeyValid(): boolean {
+  const k = (config.groqApiKey ?? '').trim();
+  return k.length > 10 && !/^your_|placeholder/i.test(k);
+}
+
+/** Replicate — бесплатный старт; использовать для картинок, если нет OpenAI */
+export function isReplicateTokenValid(): boolean {
+  const t = (config.replicateApiToken ?? '').trim();
+  return t.length > 20 && !/^r8_xxx|placeholder/i.test(t);
+}

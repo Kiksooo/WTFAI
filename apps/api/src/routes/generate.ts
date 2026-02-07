@@ -13,7 +13,8 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
     const user = request.telegramUser;
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
-    const body = bodySchema.parse(request.body ?? {});
+    try {
+      const body = bodySchema.parse(request.body ?? {});
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -59,6 +60,8 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
         error: 'Daily limit reached',
         dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
         dailyLimit,
+        requiresPayment: true,
+        starsAmount: config.paymentStarsPerGeneration,
       });
     }
 
@@ -81,9 +84,16 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
       prompt: body.prompt,
     });
 
-    return reply.send({
-      jobId: job.id,
-      status: 'queued',
-    });
+      return reply.send({
+        jobId: job.id,
+        status: 'queued',
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'ZodError') {
+        return reply.status(400).send({ error: 'Invalid prompt' });
+      }
+      request.log.error(err);
+      return reply.status(500).send({ error: 'Failed to start generation' });
+    }
   });
 };

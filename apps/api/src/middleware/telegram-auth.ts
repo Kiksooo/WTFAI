@@ -48,7 +48,9 @@ async function telegramAuthPlugin(app: FastifyInstance) {
   app.decorateRequest('telegramUser', null);
 
   app.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
-    if (request.url.includes('/health') || request.url.startsWith('/static')) return;
+    const rawPath = request.url.split('?')[0];
+    const path = rawPath.replace(/^https?:\/\/[^/]+/, '') || '/';
+    if (path === '/' || path === '/health' || path.startsWith('/static') || path.includes('/webhook/telegram') || path.includes('/admin')) return;
     const initData =
       (request.headers['x-telegram-init-data'] as string) ||
       (request.headers['x-telegram-init-data'.toLowerCase()] as string);

@@ -46,18 +46,33 @@ async function processVideoJob(payload: VideoJobPayload): Promise<void> {
 
   const scenes = await aiProvider.generateScript(payload.prompt);
   const sceneImages: { path: string }[] = [];
+  const sceneAudios: { path: string }[] = [];
 
   for (let i = 0; i < scenes.length; i++) {
     const imageBuffer = await aiProvider.generateSceneImage(scenes[i].visual);
     const relPath = await saveBuffer(imageBuffer, 'scenes', '.png');
     sceneImages.push({ path: relPath });
+
+    const audioBuffer = await aiProvider.generateSceneAudio(scenes[i].text);
+    if (audioBuffer && audioBuffer.length > 0) {
+      const audioPath = await saveBuffer(audioBuffer, 'audio', '.mp3');
+      sceneAudios.push({ path: audioPath });
+    } else {
+      sceneAudios.push({ path: '' });
+    }
   }
 
   const videoRelPath = `videos/${payload.jobId}.mp4`;
+  const audiosToUse =
+    sceneAudios.every((a) => a.path) && sceneAudios.length === scenes.length
+      ? sceneAudios
+      : undefined;
+
   await composeVideo({
     sceneImages,
     scenes,
     outputRelativePath: videoRelPath,
+    sceneAudios: audiosToUse,
   });
 
   const videoUrl = getPublicUrl(videoRelPath);
