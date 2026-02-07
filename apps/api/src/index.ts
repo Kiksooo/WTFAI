@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import { execSync } from 'child_process';
 import { config } from './config.js';
 import { telegramAuth } from './middleware/telegram-auth.js';
 import { feedRoutes } from './routes/feed.js';
@@ -10,6 +11,17 @@ import { likeRoutes } from './routes/like.js';
 import { meRoutes } from './routes/me.js';
 import { myVideosRoutes } from './routes/my-videos.js';
 import { jobRoutes } from './routes/job.js';
+
+// Применить схему БД при старте (создать таблицы, если их нет)
+try {
+  execSync('npx prisma db push', {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+  });
+} catch (err) {
+  console.error('Prisma db push failed. Check DATABASE_URL.', err);
+  process.exit(1);
+}
 
 const app = Fastify({ logger: true });
 

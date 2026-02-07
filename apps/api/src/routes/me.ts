@@ -53,10 +53,16 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
         dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
         dailyLimit,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       request.log.error(err);
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as Error).message)
+          : 'Database error';
       return reply.status(500).send({
-        error: 'Database error. Check DATABASE_URL and Railway logs.',
+        error: msg.includes('table') || msg.includes('P2021')
+          ? 'Таблицы не созданы. Проверь, что DATABASE_URL задан и сервис перезапущен.'
+          : msg,
       });
     }
   });
