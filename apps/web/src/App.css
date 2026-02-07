@@ -160,6 +160,11 @@
   color: #ef4444;
 }
 
+.generate-status {
+  font-size: 14px;
+  color: #8b5cf6;
+}
+
 .generate-btn {
   margin-top: 8px;
   padding: 16px;

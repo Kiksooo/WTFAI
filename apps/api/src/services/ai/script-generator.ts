@@ -41,8 +41,7 @@ export async function generateScript(prompt: string): Promise<Scene[]> {
 
 function getMockScenes(prompt: string): Scene[] {
   return [
-    { text: 'What if...', durationSec: 2, visual: `Scene about: ${prompt}, cartoon style, 9:16` },
-    { text: 'Exactly this.', durationSec: 2, visual: `Continuation: ${prompt}, bright, vertical` },
-    { text: 'The end.', durationSec: 2, visual: `Final scene: ${prompt}, comedy` },
+    { text: 'What if...', durationSec: 2, visual: `Scene: ${prompt}, cartoon style, 9:16` },
+    { text: 'The end.', durationSec: 2, visual: `Final: ${prompt}, comedy, vertical` },
   ];
 }

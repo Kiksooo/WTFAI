@@ -1,24 +1,67 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '@/api/client';
-import type { MeResponse } from '@/types';
+import type { MeResponse, JobResponse } from '@/types';
 
 interface GenerateScreenProps {
   onBack: () => void;
   onGenerated?: (jobId: string) => void;
 }
 
+const POLL_INTERVAL_MS = 2500;
+const POLL_MAX_ATTEMPTS = 120;
+
 export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
   const [prompt, setPrompt] = useState('');
   const [me, setMe] = useState<MeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<JobResponse['status'] | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     api
       .getMe()
       .then(setMe)
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(e instanceof Error ? e.message : 'Load failed'));
   }, []);
+
+  useEffect(() => {
+    if (!jobId) return;
+    let attempts = 0;
+    const poll = () => {
+      attempts += 1;
+      api
+        .getJob(jobId)
+        .then((job: JobResponse) => {
+          setJobStatus(job.status);
+          if (job.status === 'done' && job.videoId) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            onGenerated?.(jobId);
+            onBack();
+          } else if (job.status === 'failed') {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setError(job.error ?? 'Генерация не удалась');
+            setJobId(null);
+            setSubmitting(false);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (attempts >= POLL_MAX_ATTEMPTS && pollRef.current) {
+            clearInterval(pollRef.current);
+            setError('Время ожидания истекло. Проверь ленту позже.');
+            setJobId(null);
+            setSubmitting(false);
+          }
+        });
+    };
+    poll();
+    pollRef.current = setInterval(poll, POLL_INTERVAL_MS);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [jobId, onBack, onGenerated]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +69,12 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
     if (me && me.dailyGenerationsUsed >= me.dailyLimit) return;
     setSubmitting(true);
     setError(null);
+    setJobStatus(null);
     try {
       const res = await api.generate(prompt.trim());
-      onGenerated?.(res.jobId);
-      onBack();
+      setJobId(res.jobId);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -72,12 +114,18 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
           <p className="generate-limit-warn">Come back tomorrow or upgrade</p>
         )}
         {error && <p className="generate-error">{error}</p>}
+        {jobId && jobStatus && (
+          <p className="generate-status">
+            {jobStatus === 'queued' && 'В очереди…'}
+            {jobStatus === 'processing' && 'Генерируем видео…'}
+          </p>
+        )}
         <button
           type="submit"
           className="btn-primary generate-btn"
           disabled={!prompt.trim() || submitting || !!limitReached}
         >
-          {submitting ? 'Generating…' : 'Generate video'}
+          {submitting && !jobId ? 'Отправка…' : submitting ? 'Генерация…' : 'Generate video'}
         </button>
       </form>
     </div>

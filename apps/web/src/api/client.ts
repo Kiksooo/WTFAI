@@ -1,4 +1,22 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL_KEY = 'wtfai_api_url';
+
+function getApiBase(): string {
+  if (typeof window === 'undefined') return import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get('api');
+  if (fromQuery) {
+    try {
+      const url = new URL(fromQuery);
+      localStorage.setItem(API_URL_KEY, url.origin);
+      return url.origin;
+    } catch {
+      /* ignore */
+    }
+  }
+  const fromStorage = localStorage.getItem(API_URL_KEY);
+  if (fromStorage) return fromStorage;
+  return import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+}
 
 function getInitData(): string {
   const tg = (window as unknown as { Telegram?: { WebApp?: { initData: string } } }).Telegram?.WebApp;
@@ -11,20 +29,34 @@ async function request<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
+  const apiBase = getApiBase();
   const { body, ...rest } = options;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Telegram-Init-Data': getInitData(),
     ...(rest.headers as Record<string, string>),
   };
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...rest,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase}${path}`, {
+      ...rest,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'Load failed' || msg === 'Failed to fetch' || msg.includes('NetworkError')) {
+      throw new Error(
+        'Сервер недоступен. Проверь, что в настройках web-сервиса (Railway) задана переменная VITE_API_URL и сделан Redeploy.'
+      );
+    }
+    throw e;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error ?? res.statusText);
+    const msg = (err as { error?: string }).error ?? res.statusText;
+    if (res.status === 401) throw new Error('Ошибка входа. Открой приложение из Telegram.');
+    throw new Error(msg);
   }
   return res.json() as Promise<T>;
 }
