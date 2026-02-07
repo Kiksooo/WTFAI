@@ -1,0 +1,3 @@
+# Установка FFmpeg для сборки видео (composer.ts вызывает ffmpeg)
+[phases.setup]
+nixPkgs = ["ffmpeg"]

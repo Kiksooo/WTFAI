@@ -162,3 +162,11 @@
 Чтобы увидеть точную причину 500: в Railway открой сервис **api** → **Deployments** → последний деплой → **View Logs** (Deploy Logs / Runtime). В логах будет стек ошибки (например `PrismaClientInitializationError` или `Cannot write to file`).
 
 **Ошибка «The table 'main.Video' does not exist»:** таблицы в БД не созданы. Команда старта API теперь выполняет `prisma db push` перед запуском сервера — при следующем деплое таблицы создадутся автоматически. Закоммить изменения, запушить и дождаться Redeploy (или сделать Redeploy вручную).
+
+---
+
+## Ошибка "spawn ffmpeg ENOENT" при генерации видео
+
+Означает, что на сервере (Railway) не установлен FFmpeg. В проекте уже есть файл **`apps/api/nixpacks.toml`** — он подключает FFmpeg к сборке. После пуша и **Redeploy** сервиса api FFmpeg появится в контейнере и генерация видео должна заработать.
+
+Если ошибка остаётся: в Railway у сервиса **api** в **Variables** добавь переменную **RAILPACK_PACKAGES** = `ffmpeg` (если Railway использует Railpack), сохрани и сделай Redeploy.
