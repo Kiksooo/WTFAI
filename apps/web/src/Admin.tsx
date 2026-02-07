@@ -9,7 +9,10 @@ interface Stats {
   videosCount: number;
   jobsCount: number;
   paymentsCount: number;
+  tipsCount: number;
   totalStars: number;
+  totalStarsPayments?: number;
+  totalStarsTips?: number;
   jobsByStatus: Record<string, number>;
   recentVideos: Array<{
     id: string;
@@ -23,6 +26,16 @@ interface Stats {
     id: string;
     userId: string;
     jobId: string;
+    amountStars: number;
+    createdAt: string;
+  }>;
+  recentTips?: Array<{
+    id: string;
+    videoId: string;
+    fromUserId: string;
+    fromUser: { id: string; username: string | null; firstName: string | null } | null;
+    toUserId: string;
+    toUser: { id: string; username: string | null; firstName: string | null } | null;
     amountStars: number;
     createdAt: string;
   }>;
@@ -54,8 +67,10 @@ export default function Admin() {
   const [videos, setVideos] = useState<{ items: unknown[]; total: number } | null>(null);
   const [jobs, setJobs] = useState<{ items: unknown[]; total: number } | null>(null);
   const [payments, setPayments] = useState<{ items: unknown[]; total: number } | null>(null);
+  const [tips, setTips] = useState<{ items: unknown[]; total: number } | null>(null);
+  const [feedback, setFeedback] = useState<{ items: unknown[]; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'stats' | 'users' | 'videos' | 'jobs' | 'payments'>('stats');
+  const [tab, setTab] = useState<'stats' | 'users' | 'videos' | 'jobs' | 'payments' | 'tips' | 'feedback'>('stats');
 
   const request = useAdminApi(apiBase, adminKey);
 
@@ -94,6 +109,20 @@ export default function Admin() {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [adminKey, request]);
 
+  const loadTips = useCallback(() => {
+    if (!adminKey) return;
+    request('/admin/tips?limit=50')
+      .then((d) => setTips(d as { items: unknown[]; total: number }))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [adminKey, request]);
+
+  const loadFeedback = useCallback(() => {
+    if (!adminKey) return;
+    request('/admin/feedback?limit=50')
+      .then((d) => setFeedback(d as { items: unknown[]; total: number }))
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [adminKey, request]);
+
   useEffect(() => {
     if (!adminKey) return;
     setError(null);
@@ -105,7 +134,9 @@ export default function Admin() {
     if (tab === 'videos') loadVideos();
     if (tab === 'jobs') loadJobs();
     if (tab === 'payments') loadPayments();
-  }, [tab, loadUsers, loadVideos, loadJobs, loadPayments]);
+    if (tab === 'tips') loadTips();
+    if (tab === 'feedback') loadFeedback();
+  }, [tab, loadUsers, loadVideos, loadJobs, loadPayments, loadTips, loadFeedback]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,6 +162,7 @@ export default function Admin() {
     setVideos(null);
     setJobs(null);
     setPayments(null);
+    setTips(null);
   };
 
   if (!adminKey) {
@@ -175,7 +207,7 @@ export default function Admin() {
       {error && <p className="admin-error">{error}</p>}
 
       <nav className="admin-tabs">
-        {(['stats', 'users', 'videos', 'jobs', 'payments'] as const).map((t) => (
+        {(['stats', 'users', 'videos', 'jobs', 'payments', 'tips', 'feedback'] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -187,6 +219,8 @@ export default function Admin() {
             {t === 'videos' && 'Видео'}
             {t === 'jobs' && 'Джобы'}
             {t === 'payments' && 'Платежи'}
+            {t === 'tips' && 'Донаты'}
+            {t === 'feedback' && 'Обратная связь'}
           </button>
         ))}
       </nav>
@@ -215,7 +249,16 @@ export default function Admin() {
               <span className="admin-card-value">⭐ {stats.totalStars}</span>
               <span className="admin-card-label">Звёзд всего</span>
             </div>
+            <div className="admin-card">
+              <span className="admin-card-value">{stats.tipsCount ?? 0}</span>
+              <span className="admin-card-label">Донатов</span>
+            </div>
           </div>
+          {(stats.totalStarsPayments != null || stats.totalStarsTips != null) && (
+            <p className="admin-stats-breakdown">
+              Платежи за генерации: ⭐ {stats.totalStarsPayments ?? 0} · Донаты авторам: ⭐ {stats.totalStarsTips ?? 0}
+            </p>
+          )}
           <h3>Джобы по статусу</h3>
           <pre className="admin-pre">{JSON.stringify(stats.jobsByStatus, null, 2)}</pre>
           <h3>Последние видео</h3>
@@ -355,17 +398,28 @@ export default function Admin() {
                       <th>User ID</th>
                       <th>Prompt</th>
                       <th>Статус</th>
+                      <th>Ошибка</th>
                       <th>Video ID</th>
                       <th>Создан</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(jobs.items as Array<{ id: string; userId: string; prompt: string; status: string; videoId: string | null; createdAt: string }>).map((j) => (
+                    {(jobs.items as Array<{ id: string; userId: string; prompt: string; status: string; videoId: string | null; error: string | null; createdAt: string }>).map((j) => (
                       <tr key={j.id}>
                         <td><code>{j.id.slice(0, 8)}</code></td>
                         <td><code>{j.userId}</code></td>
                         <td>{j.prompt.slice(0, 30)}…</td>
-                        <td><span className={`admin-status admin-status-${j.status}`}>{j.status}</span></td>
+                        <td>
+                          <span className={`admin-status admin-status-${j.status}`}>{j.status}</span>
+                          {j.status === 'failed' && j.error && (
+                            <div className="admin-job-error-inline" title={j.error}>
+                              {j.error}
+                            </div>
+                          )}
+                        </td>
+                        <td className={j.error ? 'admin-job-error-cell' : ''} title={j.error ?? ''}>
+                          {j.error ? <code className="admin-job-error">{j.error.length > 80 ? j.error.slice(0, 80) + '…' : j.error}</code> : '—'}
+                        </td>
                         <td>{j.videoId ? <code>{j.videoId.slice(0, 8)}</code> : '—'}</td>
                         <td>{new Date(j.createdAt).toLocaleString()}</td>
                       </tr>
@@ -378,9 +432,44 @@ export default function Admin() {
         </section>
       )}
 
+      {tab === 'tips' && (
+        <section className="admin-section">
+          <h2>Донаты (звёзды авторам)</h2>
+          {tips && (
+            <>
+              <p>Всего: {tips.total}</p>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>От</th>
+                      <th>Кому</th>
+                      <th>Video ID</th>
+                      <th>⭐</th>
+                      <th>Дата</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(tips.items as Array<{ id: string; fromUser: { firstName: string | null; username: string | null } | null; toUser: { firstName: string | null; username: string | null } | null; fromUserId: string; toUserId: string; videoId: string; amountStars: number; createdAt: string }>).map((t) => (
+                      <tr key={t.id}>
+                        <td>{t.fromUser?.firstName ?? t.fromUser?.username ?? t.fromUserId}</td>
+                        <td>{t.toUser?.firstName ?? t.toUser?.username ?? t.toUserId}</td>
+                        <td><code>{t.videoId.slice(0, 8)}</code></td>
+                        <td>⭐ {t.amountStars}</td>
+                        <td>{new Date(t.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       {tab === 'payments' && (
         <section className="admin-section">
-          <h2>Платежи (звёзды)</h2>
+          <h2>Платежи (звёзды за генерации)</h2>
           {payments && (
             <>
               <p>Всего: {payments.total}</p>
@@ -405,6 +494,37 @@ export default function Admin() {
                         <td>⭐ {p.amountStars}</td>
                         <td><code className="admin-code-small">{p.telegramPaymentChargeId.slice(0, 16)}…</code></td>
                         <td>{new Date(p.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {tab === 'feedback' && (
+        <section className="admin-section">
+          <h2>Обратная связь</h2>
+          {feedback && (
+            <>
+              <p>Всего: {feedback.total}</p>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>User ID</th>
+                      <th>Сообщение</th>
+                      <th>Дата</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(feedback.items as Array<{ id: string; userId: string; message: string; createdAt: string }>).map((f) => (
+                      <tr key={f.id}>
+                        <td><code>{f.userId}</code></td>
+                        <td className="admin-feedback-msg">{f.message}</td>
+                        <td>{new Date(f.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
