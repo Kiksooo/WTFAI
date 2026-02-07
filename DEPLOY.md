@@ -11,9 +11,9 @@
 1. Зайди на [railway.app](https://railway.app), войди через GitHub.
 2. **New Project** → **Deploy from GitHub repo** → выбери репозиторий WTFAI.
 3. В проекте нажми **Add Service** → **GitHub Repo** → тот же репозиторий.
-4. У созданного сервиса открой **Settings**:
-   - **Root Directory:** укажи `apps/api`.
-   - **Build Command:** оставь по умолчанию (Railway сам запустит `npm run build` из корня сервиса). Если нужно явно: `npm install && prisma generate && npx tsc`.
+4. У созданного сервиса **api** открой **Settings** и задай **вручную** (иначе будет "No workspaces found"):
+   - **Root Directory:** `apps/api` (обязательно).
+   - **Build Command:** `npm install && npm run build` (именно так, без `--workspace=api`).
    - **Start Command:** `node dist/index.js`.
 5. **Variables** — добавь переменные из своего `apps/api/.env`:
    - `DATABASE_URL` = `file:./data/dev.db` (для Railway лучше потом перейти на PostgreSQL)
@@ -96,3 +96,33 @@
 7. Открой бота в Telegram и нажми кнопку меню — откроется твоя Mini App по ngrok.
 
 После проверки можно перейти на деплой по шагам 1–4 выше.
+
+---
+
+## Ошибка "No workspaces found" на Railway
+
+Если у **api** или **web** в логах сборки видно `npm error No workspaces found: --workspace=api` (или `--workspace=web`), значит Railway собирает с корня репо и использует workspace-команду. Нужно собирать из папки сервиса:
+
+1. Открой сервис (**api** или **web**) → **Settings**.
+2. Заполни:
+   - **Root Directory:** для api — `apps/api`, для web — `apps/web`.
+   - **Build Command:** `npm install && npm run build` (без `--workspace=...`).
+   - **Start Command:** для api — `node dist/index.js`; для web (статический сайт) — например `npx serve dist` или настрой отдачу папки `dist`.
+3. Сохрани и сделай **Redeploy** (Deployments → три точки у последнего деплоя → Redeploy).
+
+---
+
+## Internal Server Error (500) на API
+
+Чаще всего 500 даёт **база данных**: на Railway у сервиса **api** не задан или неверный **DATABASE_URL**.
+
+1. Открой сервис **api** в Railway → **Variables**.
+2. Добавь переменную **DATABASE_URL**:
+   - **SQLite (данные не сохраняются между деплоями):**  
+     `file:/tmp/data.db`
+   - **Постоянная база:** подключи **PostgreSQL** в проекте (Add Plugin → PostgreSQL), скопируй **DATABASE_URL** из настроек плагина и вставь в Variables сервиса api.
+3. Сохрани и сделай **Redeploy** сервиса api.
+
+Чтобы увидеть точную причину 500: в Railway открой сервис **api** → **Deployments** → последний деплой → **View Logs** (Deploy Logs / Runtime). В логах будет стек ошибки (например `PrismaClientInitializationError` или `Cannot write to file`).
+
+**Ошибка «The table 'main.Video' does not exist»:** таблицы в БД не созданы. Команда старта API теперь выполняет `prisma db push` перед запуском сервера — при следующем деплое таблицы создадутся автоматически. Закоммить изменения, запушить и дождаться Redeploy (или сделать Redeploy вручную).

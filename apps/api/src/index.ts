@@ -13,6 +13,13 @@ import { jobRoutes } from './routes/job.js';
 
 const app = Fastify({ logger: true });
 
+app.setErrorHandler((err, request, reply) => {
+  request.log.error(err);
+  reply.status(err.statusCode ?? 500).send({
+    error: err.statusCode === 500 ? 'Internal Server Error' : err.message,
+  });
+});
+
 await app.register(cors, { origin: true });
 await app.register(fastifyStatic, {
   root: path.resolve(process.cwd(), config.storagePath),

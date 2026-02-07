@@ -7,50 +7,57 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
     const user = request.telegramUser;
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    let dbUser = await prisma.user.findUnique({
-      where: { id: BigInt(user.id) },
-    });
-
-    if (!dbUser) {
-      dbUser = await prisma.user.create({
-        data: {
-          id: BigInt(user.id),
-          username: user.username ?? null,
-          firstName: user.first_name ?? null,
-          isPremium: !!user.is_premium,
-          dailyGenerationsUsed: 0,
-          lastGenerationResetAt: today,
-        },
+      let dbUser = await prisma.user.findUnique({
+        where: { id: BigInt(user.id) },
       });
-    } else {
-      const lastReset = dbUser.lastGenerationResetAt
-        ? new Date(dbUser.lastGenerationResetAt)
-        : null;
-      const resetDate = lastReset ? new Date(lastReset) : null;
-      resetDate?.setHours(0, 0, 0, 0);
-      if (!resetDate || resetDate.getTime() < today.getTime()) {
-        dbUser = await prisma.user.update({
-          where: { id: BigInt(user.id) },
+
+      if (!dbUser) {
+        dbUser = await prisma.user.create({
           data: {
+            id: BigInt(user.id),
+            username: user.username ?? null,
+            firstName: user.first_name ?? null,
+            isPremium: !!user.is_premium,
             dailyGenerationsUsed: 0,
             lastGenerationResetAt: today,
           },
         });
+      } else {
+        const lastReset = dbUser.lastGenerationResetAt
+          ? new Date(dbUser.lastGenerationResetAt)
+          : null;
+        const resetDate = lastReset ? new Date(lastReset) : null;
+        resetDate?.setHours(0, 0, 0, 0);
+        if (!resetDate || resetDate.getTime() < today.getTime()) {
+          dbUser = await prisma.user.update({
+            where: { id: BigInt(user.id) },
+            data: {
+              dailyGenerationsUsed: 0,
+              lastGenerationResetAt: today,
+            },
+          });
+        }
       }
+
+      const dailyLimit = dbUser.isPremium
+        ? config.dailyLimitPremium
+        : config.dailyLimitFree;
+
+      return reply.send({
+        id: String(dbUser.id),
+        isPremium: dbUser.isPremium,
+        dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
+        dailyLimit,
+      });
+    } catch (err) {
+      request.log.error(err);
+      return reply.status(500).send({
+        error: 'Database error. Check DATABASE_URL and Railway logs.',
+      });
     }
-
-    const dailyLimit = dbUser.isPremium
-      ? config.dailyLimitPremium
-      : config.dailyLimitFree;
-
-    return reply.send({
-      id: String(dbUser.id),
-      isPremium: dbUser.isPremium,
-      dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
-      dailyLimit,
-    });
   });
 };
