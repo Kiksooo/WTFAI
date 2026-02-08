@@ -9,6 +9,7 @@ interface ReelCardProps {
   onLike: () => void;
   onShare: () => void;
   onGenerate: () => void;
+  onTip: (video: VideoItem, amountStars: number) => void;
 }
 
 export function ReelCard({
@@ -18,6 +19,7 @@ export function ReelCard({
   onLike,
   onShare,
   onGenerate,
+  onTip,
 }: ReelCardProps) {
   return (
     <div className="reel-card">
@@ -29,6 +31,7 @@ export function ReelCard({
           onLike={onLike}
           onShare={onShare}
           onGenerate={onGenerate}
+          onTip={onTip}
         />
       </div>
     </div>

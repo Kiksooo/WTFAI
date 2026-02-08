@@ -63,21 +63,22 @@ async function telegramAuthPlugin(app: FastifyInstance) {
         };
         return;
       }
-      return reply.status(401).send({ error: 'Missing X-Telegram-Init-Data' });
+      return reply.status(401).send({ error: 'Missing X-Telegram-Init-Data', code: 'missing_init_data' });
     }
     if (!validateTelegramWebAppData(initData)) {
-      return reply.status(401).send({ error: 'Invalid init data' });
+      request.log.info({ msg: 'Telegram initData validation failed — check TELEGRAM_BOT_TOKEN matches the bot whose Menu Button opens this Mini App' });
+      return reply.status(401).send({ error: 'Invalid init data', code: 'invalid_init_data' });
     }
     const params = parseInitData(initData);
     const userJson = params.user;
     if (!userJson) {
-      return reply.status(401).send({ error: 'No user in init data' });
+      return reply.status(401).send({ error: 'No user in init data', code: 'no_user' });
     }
     try {
       const user = JSON.parse(userJson) as TelegramUser;
       request.telegramUser = user;
     } catch {
-      return reply.status(401).send({ error: 'Invalid user data' });
+      return reply.status(401).send({ error: 'Invalid user data', code: 'invalid_user' });
     }
   });
 }

@@ -34,6 +34,15 @@ export interface MeResponse {
     basic: { monthlyVideos: number; priceStars: number };
     vip: { monthlyVideos: number; priceStars: number };
   };
+  referralCode?: string | null;
+  referralCredits?: number;
+  starsReceived?: number;
+}
+
+export interface TipInvoiceResponse {
+  invoiceUrl: string;
+  starsAmount: number;
+  videoId: string;
 }
 
 export interface SubscriptionInvoiceResponse {

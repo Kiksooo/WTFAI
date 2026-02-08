@@ -12,6 +12,8 @@ import { meRoutes } from './routes/me.js';
 import { myVideosRoutes } from './routes/my-videos.js';
 import { jobRoutes } from './routes/job.js';
 import { paymentRoutes } from './routes/payment.js';
+import { tipRoutes } from './routes/tip.js';
+import { feedbackRoutes } from './routes/feedback.js';
 import { webhookTelegramRoutes } from './routes/webhook-telegram.js';
 import { adminRoutes } from './routes/admin.js';
 
@@ -28,6 +30,14 @@ try {
 
 const app = Fastify({ logger: true });
 
+// Проверка FFmpeg при старте (для отладки генерации видео)
+try {
+  execSync('ffmpeg -version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+  app.log.info('FFmpeg: OK');
+} catch {
+  app.log.warn('FFmpeg: not found in PATH — генерация видео будет падать с ENOENT');
+}
+
 app.setErrorHandler((err, request, reply) => {
   request.log.error(err);
   reply.status(err.statusCode ?? 500).send({
@@ -35,7 +45,10 @@ app.setErrorHandler((err, request, reply) => {
   });
 });
 
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: true,
+  allowedHeaders: ['Content-Type', 'X-Telegram-Init-Data', 'X-Admin-Key'],
+});
 await app.register(fastifyStatic, {
   root: path.resolve(process.cwd(), config.storagePath),
   prefix: '/static/',
@@ -48,6 +61,8 @@ await app.register(myVideosRoutes, { prefix: '/my-videos' });
 await app.register(meRoutes, { prefix: '/me' });
 await app.register(jobRoutes, { prefix: '/job' });
 await app.register(paymentRoutes, { prefix: '/payment' });
+await app.register(tipRoutes, { prefix: '/tip' });
+await app.register(feedbackRoutes, { prefix: '/feedback' });
 await app.register(webhookTelegramRoutes, { prefix: '/webhook' });
 await app.register(adminRoutes, { prefix: '/admin' });
 

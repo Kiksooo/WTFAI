@@ -62,6 +62,22 @@ export const webhookTelegramRoutes: FastifyPluginAsync = async (app) => {
       const q = body.pre_checkout_query;
       const payload = q.invoice_payload;
 
+      if (payload.startsWith('tip:')) {
+        const parts = payload.slice(4).split(':');
+        if (parts.length >= 2) {
+          const [videoId, authorId] = parts;
+          const video = await prisma.video.findUnique({
+            where: { id: videoId },
+          });
+          if (video && String(video.createdById) === authorId) {
+            await answerPreCheckoutQuery(q.id, true);
+            return reply.send({ ok: true });
+          }
+        }
+        await answerPreCheckoutQuery(q.id, false, 'Video or author not found.');
+        return reply.send({ ok: true });
+      }
+
       if (payload.startsWith('sub:')) {
         const intentId = payload.slice(4);
         const intent = await prisma.subscriptionIntent.findUnique({
@@ -91,6 +107,37 @@ export const webhookTelegramRoutes: FastifyPluginAsync = async (app) => {
       const payload = pay.invoice_payload;
       const chargeId = pay.telegram_payment_charge_id ?? '';
       const amountStars = Number(pay.total_amount) || 1;
+
+      if (payload.startsWith('tip:')) {
+        const parts = payload.slice(4).split(':');
+        if (parts.length >= 2) {
+          const [videoId, authorIdStr] = parts;
+          const authorId = BigInt(authorIdStr);
+          const video = await prisma.video.findUnique({
+            where: { id: videoId },
+          });
+          if (video && video.createdById === authorId) {
+            try {
+              await prisma.tip.create({
+                data: {
+                  videoId,
+                  fromUserId: BigInt(body.message.from?.id ?? 0),
+                  toUserId: authorId,
+                  amountStars,
+                  telegramPaymentChargeId: chargeId || undefined,
+                },
+              });
+              await prisma.user.update({
+                where: { id: authorId },
+                data: { starsReceived: { increment: amountStars } },
+              });
+            } catch {
+              // дубликат оплаты — игнорируем
+            }
+          }
+        }
+        return reply.send({ ok: true });
+      }
 
       if (payload.startsWith('sub:')) {
         const intentId = payload.slice(4);

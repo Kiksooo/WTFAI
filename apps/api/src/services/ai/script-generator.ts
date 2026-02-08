@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { config, isOpenAIKeyValid, isGroqKeyValid } from '../../config.js';
+
+type OpenAIConstructor = new (opts: { apiKey: string; baseURL?: string }) => OpenAI;
 import { isQuotaOrAuthError } from './errors.js';
 import type { Scene } from './types.js';
 
@@ -25,7 +27,7 @@ function parseScriptResponse(content: string): Scene[] {
 export async function generateScript(prompt: string): Promise<Scene[]> {
   if (isOpenAIKeyValid()) {
     try {
-      const openai = new OpenAI({ apiKey: config.openaiApiKey });
+      const openai = new (OpenAI as OpenAIConstructor)({ apiKey: config.openaiApiKey });
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -43,7 +45,7 @@ export async function generateScript(prompt: string): Promise<Scene[]> {
 
   if (isGroqKeyValid()) {
     try {
-      const groq = new OpenAI({
+      const groq = new (OpenAI as OpenAIConstructor)({
         apiKey: config.groqApiKey,
         baseURL: 'https://api.groq.com/openai/v1',
       });

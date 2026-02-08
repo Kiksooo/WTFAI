@@ -1,0 +1,2 @@
+# Явно включаем Node, чтобы npm был в PATH при сборке
+providers = ["node"]

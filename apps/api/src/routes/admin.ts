@@ -28,11 +28,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   /** Сводка по проекту */
   app.get('/stats', async (_request, reply) => {
     try {
-      const [usersCount, videosCount, jobsCount, paymentsCount] = await Promise.all([
+      const [usersCount, videosCount, jobsCount, paymentsCount, tipsCount] = await Promise.all([
         prisma.user.count(),
         prisma.video.count(),
         prisma.generationJob.count(),
         prisma.payment.count(),
+        prisma.tip.count(),
       ]);
 
       const jobsByStatus = await prisma.generationJob.groupBy({
@@ -40,9 +41,10 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         _count: { id: true },
       });
 
-      const totalStars = await prisma.payment.aggregate({
-        _sum: { amountStars: true },
-      });
+      const [totalStarsPayments, totalStarsTips] = await Promise.all([
+        prisma.payment.aggregate({ _sum: { amountStars: true } }),
+        prisma.tip.aggregate({ _sum: { amountStars: true } }),
+      ]);
 
       const recentVideos = await prisma.video.findMany({
         take: 5,
@@ -55,12 +57,24 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         orderBy: { createdAt: 'desc' },
       });
 
+      const recentTips = await prisma.tip.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          fromUser: { select: { id: true, username: true, firstName: true } },
+          toUser: { select: { id: true, username: true, firstName: true } },
+        },
+      });
+
       return reply.send({
         usersCount,
         videosCount,
         jobsCount,
         paymentsCount,
-        totalStars: totalStars._sum.amountStars ?? 0,
+        tipsCount,
+        totalStars: (totalStarsPayments._sum.amountStars ?? 0) + (totalStarsTips._sum.amountStars ?? 0),
+        totalStarsPayments: totalStarsPayments._sum.amountStars ?? 0,
+        totalStarsTips: totalStarsTips._sum.amountStars ?? 0,
         jobsByStatus: Object.fromEntries(jobsByStatus.map((s) => [s.status, s._count.id])),
         recentVideos: recentVideos.map((v) => ({
           id: v.id,
@@ -76,6 +90,16 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
           jobId: p.jobId,
           amountStars: p.amountStars,
           createdAt: p.createdAt.toISOString(),
+        })),
+        recentTips: recentTips.map((t) => ({
+          id: t.id,
+          videoId: t.videoId,
+          fromUserId: String(t.fromUserId),
+          fromUser: t.fromUser ? { id: String(t.fromUser.id), username: t.fromUser.username, firstName: t.fromUser.firstName } : null,
+          toUserId: String(t.toUserId),
+          toUser: t.toUser ? { id: String(t.toUser.id), username: t.toUser.username, firstName: t.toUser.firstName } : null,
+          amountStars: t.amountStars,
+          createdAt: t.createdAt.toISOString(),
         })),
       });
     } catch (err) {
@@ -190,6 +214,44 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  /** Список донатов (tips) */
+  app.get<{ Querystring: { limit?: string; offset?: string } }>('/tips', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const [tips, total] = await Promise.all([
+        prisma.tip.findMany({
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            fromUser: { select: { id: true, username: true, firstName: true } },
+            toUser: { select: { id: true, username: true, firstName: true } },
+          },
+        }),
+        prisma.tip.count(),
+      ]);
+      return reply.send({
+        items: tips.map((t) => ({
+          id: t.id,
+          videoId: t.videoId,
+          fromUserId: String(t.fromUserId),
+          fromUser: t.fromUser ? { id: String(t.fromUser.id), username: t.fromUser.username, firstName: t.fromUser.firstName } : null,
+          toUserId: String(t.toUserId),
+          toUser: t.toUser ? { id: String(t.toUser.id), username: t.toUser.username, firstName: t.toUser.firstName } : null,
+          amountStars: t.amountStars,
+          createdAt: t.createdAt.toISOString(),
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load tips' });
+    }
+  });
+
   /** Список платежей */
   app.get<{ Querystring: { limit?: string; offset?: string } }>('/payments', async (request, reply) => {
     try {
@@ -219,6 +281,36 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     } catch (err) {
       app.log.error(err);
       return reply.status(500).send({ error: 'Failed to load payments' });
+    }
+  });
+
+  /** Список обратной связи */
+  app.get<{ Querystring: { limit?: string; offset?: string } }>('/feedback', async (request, reply) => {
+    try {
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit ?? '50', 10)));
+      const offset = Math.max(0, parseInt(request.query.offset ?? '0', 10));
+      const [items, total] = await Promise.all([
+        prisma.feedback.findMany({
+          take: limit,
+          skip: offset,
+          orderBy: { createdAt: 'desc' },
+        }),
+        prisma.feedback.count(),
+      ]);
+      return reply.send({
+        items: items.map((f) => ({
+          id: f.id,
+          userId: String(f.userId),
+          message: f.message,
+          createdAt: f.createdAt.toISOString(),
+        })),
+        total,
+        limit,
+        offset,
+      });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to load feedback' });
     }
   });
 };

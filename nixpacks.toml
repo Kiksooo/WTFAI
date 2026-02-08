@@ -1,0 +1,17 @@
+# Когда Railway собирает API из корня через Nixpacks — подтягиваем FFmpeg и собираем apps/api
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["...", "ffmpeg"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["cd apps/api && npx prisma generate && npm run build"]
+
+[variables]
+NODE_ENV = "production"
+
+[start]
+cmd = "node apps/api/dist/index.js"

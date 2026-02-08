@@ -25,6 +25,8 @@ export interface TelegramWebApp {
     onClick: (cb: () => void) => void;
   };
   openTelegramLink: (url: string) => void;
+  openInvoice?: (url: string) => void;
+  showPopup?: (params: { message: string }) => void;
 }
 
 declare global {

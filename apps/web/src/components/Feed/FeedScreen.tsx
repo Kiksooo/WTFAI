@@ -34,6 +34,20 @@ export function FeedScreen({
     }
   }, []);
 
+  const handleTip = useCallback(
+    async (v: VideoItem, amountStars: number) => {
+      try {
+        const res = await api.createTipInvoice(v.id, amountStars);
+        tg?.openInvoice?.(res.invoiceUrl) ?? window.open(res.invoiceUrl, '_blank');
+      } catch (e) {
+        console.error(e);
+        const msg = e instanceof Error ? e.message : 'Ошибка';
+        tg?.showPopup?.({ message: msg }) ?? window.alert(msg);
+      }
+    },
+    [tg]
+  );
+
   const handleShare = useCallback(
     (video: VideoItem) => {
       const url = `${window.location.origin}${window.location.pathname}?startapp=video_${video.id}`;
@@ -108,6 +122,7 @@ export function FeedScreen({
               onLike={() => handleLike(video)}
               onShare={() => handleShare(video)}
               onGenerate={onNavigateGenerate}
+              onTip={handleTip}
             />
           </div>
         ))}

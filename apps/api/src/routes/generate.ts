@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db/index.js';
 import { config } from '../config.js';
 import { enqueueVideoJob } from '../queue/video-job.js';
+import { generateReferralCode } from '../lib/referral.js';
 
 const bodySchema = z.object({
   prompt: z.string().min(1).max(500),
@@ -24,17 +25,33 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
     });
 
     if (!dbUser) {
-      dbUser = await prisma.user.create({
-        data: {
-          id: BigInt(user.id),
-          username: user.username ?? null,
-          firstName: user.first_name ?? null,
-          isPremium: !!user.is_premium,
-          dailyGenerationsUsed: 0,
-          lastGenerationResetAt: today,
-        },
-      });
-    } else {
+      let referralCode = generateReferralCode();
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          dbUser = await prisma.user.create({
+            data: {
+              id: BigInt(user.id),
+              username: user.username ?? null,
+              firstName: user.first_name ?? null,
+              isPremium: !!user.is_premium,
+              dailyGenerationsUsed: 0,
+              lastGenerationResetAt: today,
+              referralCode,
+            },
+          });
+          break;
+        } catch (e: unknown) {
+          const isUniqueViolation =
+            e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002';
+          if (isUniqueViolation && attempt < 2) {
+            referralCode = generateReferralCode();
+            continue;
+          }
+          throw e;
+        }
+      }
+    }
+    if (dbUser) {
       const lastReset = dbUser.lastGenerationResetAt
         ? new Date(dbUser.lastGenerationResetAt)
         : null;
@@ -58,7 +75,7 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
 
     let limit: number;
     let used: number;
-    let updateData: { dailyGenerationsUsed?: number; monthlyGenerationsUsed?: number };
+    let updateData: { dailyGenerationsUsed?: number; monthlyGenerationsUsed?: number; referralCredits?: number };
 
     if (hasActiveSubscription) {
       limit = dbUser.subscriptionPlan === 'vip' ? config.vipMonthlyVideos : config.basicMonthlyVideos;
@@ -75,7 +92,8 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
     } else {
       limit = dbUser.isPremium ? config.dailyLimitPremium : config.dailyLimitFree;
       used = dbUser.dailyGenerationsUsed;
-      if (used >= limit) {
+      const useReferralCredit = used >= limit && dbUser.referralCredits > 0;
+      if (used >= limit && !useReferralCredit) {
         return reply.status(429).send({
           error: 'Daily limit reached',
           dailyGenerationsUsed: dbUser.dailyGenerationsUsed,
@@ -84,7 +102,11 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
           starsAmount: config.paymentStarsPerGeneration,
         });
       }
-      updateData = { dailyGenerationsUsed: dbUser.dailyGenerationsUsed + 1 };
+      if (useReferralCredit) {
+        updateData = { referralCredits: dbUser.referralCredits - 1 };
+      } else {
+        updateData = { dailyGenerationsUsed: dbUser.dailyGenerationsUsed + 1 };
+      }
     }
 
     const job = await prisma.generationJob.create({

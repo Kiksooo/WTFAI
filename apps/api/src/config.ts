@@ -30,6 +30,8 @@ export const config = {
   devSkipTelegramAuth: process.env.DEV_SKIP_TELEGRAM_AUTH === 'true',
   /** Секрет для доступа к админке (заголовок X-Admin-Key). Если пусто — админка отключена. */
   adminSecret: process.env.ADMIN_SECRET ?? '',
+  /** Варианты сумм доната звёздами за видео (через запятую). */
+  tipStarsOptions: (process.env.TIP_STARS_OPTIONS ?? '5,10,25').split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => n > 0),
 } as const;
 
 /** Использовать OpenAI только если ключ задан и не плейсхолдер (your_openai_key и т.п.) */

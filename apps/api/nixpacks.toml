@@ -1,3 +1,6 @@
-# Установка FFmpeg для сборки видео (composer.ts вызывает ffmpeg)
+# Явно включаем Node, чтобы при кастомном setup (FFmpeg) npm был в PATH
+providers = ["node"]
+
+# Установка FFmpeg для сборки видео (composer.ts вызывает ffmpeg). "..." расширяет пакеты по умолчанию, а не заменяет — ffmpeg будет доступен и в рантайме.
 [phases.setup]
-nixPkgs = ["ffmpeg"]
+nixPkgs = ["...", "ffmpeg"]

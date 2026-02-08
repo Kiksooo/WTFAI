@@ -38,3 +38,26 @@ export async function createInvoiceLink(
   }
   return data.result;
 }
+
+/** Возврат звёзд пользователю (например при падении генерации). */
+export async function refundStarsPayment(
+  userId: bigint,
+  telegramPaymentChargeId: string
+): Promise<boolean> {
+  if (!config.botToken) return false;
+  const url = `${TELEGRAM_API}/bot${config.botToken}/refundStarPayment`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: Number(userId),
+      telegram_payment_charge_id: telegramPaymentChargeId,
+    }),
+  });
+  const data = (await res.json()) as { ok?: boolean; description?: string };
+  if (!data.ok) {
+    console.warn('refundStarPayment failed:', data.description, { userId: String(userId), chargeId: telegramPaymentChargeId });
+    return false;
+  }
+  return true;
+}

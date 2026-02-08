@@ -17,10 +17,18 @@ model User {
   subscriptionPlan         String   @default("free")   // free | basic | vip
   subscriptionExpiresAt    DateTime?
   monthlyGenerationsUsed   Int      @default(0)
+  referralCode             String?  @unique            // код для реферальной ссылки
+  referredById             BigInt?
+  referredBy               User?    @relation("Referral", fields: [referredById], references: [id])
+  referred                 User[]   @relation("Referral")
+  referralCredits          Int      @default(0)       // бонусные генерации за приглашённых
+  starsReceived            Int      @default(0)      // звёзды, полученные от донатов за видео
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
   videos                   Video[]
   likes                    Like[]
+  tipsGiven                Tip[]    @relation("TipGiver")
+  tipsReceived             Tip[]    @relation("TipReceiver")
 }
 
 model SubscriptionIntent {
@@ -41,6 +49,7 @@ model Video {
   createdBy   User     @relation(fields: [createdById], references: [id])
   createdAt   DateTime @default(now())
   likes       Like[]
+  tips        Tip[]
 }
 
 model Like {
@@ -69,4 +78,24 @@ model Payment {
   amountStars             Int
   telegramPaymentChargeId String   @unique
   createdAt               DateTime @default(now())
+}
+
+model Tip {
+  id                      String   @id @default(cuid())
+  videoId                 String
+  fromUserId              BigInt
+  toUserId                BigInt   // автор видео
+  amountStars             Int
+  telegramPaymentChargeId String?  @unique
+  createdAt               DateTime @default(now())
+  video                   Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  fromUser                User     @relation("TipGiver", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser                  User     @relation("TipReceiver", fields: [toUserId], references: [id], onDelete: Cascade)
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    BigInt
+  message   String
+  createdAt DateTime @default(now())
 }
