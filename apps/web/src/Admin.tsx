@@ -42,7 +42,7 @@ interface Stats {
 }
 
 function useAdminApi(apiBase: string, adminKey: string) {
-  return useCallback(
+  const get = useCallback(
     async (path: string): Promise<unknown> => {
       const res = await fetch(`${apiBase}${path}`, {
         headers: { 'X-Admin-Key': adminKey },
@@ -55,6 +55,21 @@ function useAdminApi(apiBase: string, adminKey: string) {
     },
     [apiBase, adminKey]
   );
+  const post = useCallback(
+    async (path: string): Promise<unknown> => {
+      const res = await fetch(`${apiBase}${path}`, {
+        method: 'POST',
+        headers: { 'X-Admin-Key': adminKey },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? res.statusText);
+      }
+      return res.json();
+    },
+    [apiBase, adminKey]
+  );
+  return { request: get, requestPost: post };
 }
 
 export default function Admin() {
@@ -70,9 +85,11 @@ export default function Admin() {
   const [tips, setTips] = useState<{ items: unknown[]; total: number } | null>(null);
   const [feedback, setFeedback] = useState<{ items: unknown[]; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [refundingJobId, setRefundingJobId] = useState<string | null>(null);
+  const [refundError, setRefundError] = useState<string | null>(null);
   const [tab, setTab] = useState<'stats' | 'users' | 'videos' | 'jobs' | 'payments' | 'tips' | 'feedback'>('stats');
 
-  const request = useAdminApi(apiBase, adminKey);
+  const { request, requestPost } = useAdminApi(apiBase, adminKey);
 
   const loadStats = useCallback(() => {
     if (!adminKey) return;
@@ -387,6 +404,7 @@ export default function Admin() {
       {tab === 'jobs' && (
         <section className="admin-section">
           <h2>Джобы генерации</h2>
+          {refundError && <p className="admin-error">Возврат: {refundError}</p>}
           {jobs && (
             <>
               <p>Всего: {jobs.total}</p>
@@ -401,6 +419,7 @@ export default function Admin() {
                       <th>Ошибка</th>
                       <th>Video ID</th>
                       <th>Создан</th>
+                      <th>Действие</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -422,6 +441,30 @@ export default function Admin() {
                         </td>
                         <td>{j.videoId ? <code>{j.videoId.slice(0, 8)}</code> : '—'}</td>
                         <td>{new Date(j.createdAt).toLocaleString()}</td>
+                        <td>
+                          {j.status === 'failed' && (
+                            <button
+                              type="button"
+                              className="admin-btn admin-btn-small"
+                              disabled={refundingJobId !== null}
+                              onClick={() => {
+                                setRefundError(null);
+                                setRefundingJobId(j.id);
+                                requestPost(`/admin/jobs/${j.id}/refund`)
+                                  .then(() => {
+                                    loadJobs();
+                                    setRefundingJobId(null);
+                                  })
+                                  .catch((e) => {
+                                    setRefundError(e instanceof Error ? e.message : String(e));
+                                    setRefundingJobId(null);
+                                  });
+                              }}
+                            >
+                              {refundingJobId === j.id ? '…' : 'Вернуть звёзды'}
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

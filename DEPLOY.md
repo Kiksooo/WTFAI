@@ -11,10 +11,9 @@
 1. Зайди на [railway.app](https://railway.app), войди через GitHub.
 2. **New Project** → **Deploy from GitHub repo** → выбери репозиторий WTFAI.
 3. В проекте нажми **Add Service** → **GitHub Repo** → тот же репозиторий.
-4. У созданного сервиса **api** открой **Settings** и задай **вручную** (иначе будет "No workspaces found"):
-   - **Root Directory:** `apps/api` (обязательно).
-   - **Build Command:** `npm install && npm run build` (именно так, без `--workspace=api`).
-   - **Start Command:** `node dist/index.js`.
+4. У созданного сервиса **api** открой **Settings** и задай:
+   - **Root Directory:** **оставь пустым** (очисти поле, если там было `apps/api`). Сборка пойдёт из **корня** репо: Railway подхватит корневой **`railway.toml`** и **`Dockerfile`** — образ соберётся с FFmpeg, Builder будет Dockerfile. Если оставить Root Directory = `apps/api`, Railway может показывать «The value is set in apps/api/railway.toml» и не давать сменить Builder — тогда единственный надёжный вариант: собрать из корня (пустой Root Directory).
+   - **Start Command** задан в корневом `railway.toml` (`node dist/index.js`); при сборке из корня менять ничего не нужно.
 5. **Variables** — добавь переменные из своего `apps/api/.env`:
    - `DATABASE_URL` = `file:./data/dev.db` (для Railway лучше потом перейти на PostgreSQL)
    - `TELEGRAM_BOT_TOKEN` = твой токен от BotFather
@@ -24,8 +23,9 @@
    - `BASE_URL` = **сюда потом подставишь URL этого сервиса** (например `https://wtfai-api-production.up.railway.app`)
    - `PAYMENT_STARS_PER_GENERATION` = (опционально, по умолчанию 5 — сколько звёзд за одну генерацию)
    - `TELEGRAM_WEBHOOK_SECRET` = (опционально, секрет для проверки webhook; задай при настройке setWebhook)
-6. Сохрани и дождись деплоя. Скопируй **публичный URL** сервиса — он будет вида **`https://имя-сервиса.up.railway.app`** (например `https://wtfai-api-production.up.railway.app`). Это твой **API URL**.
-7. **Оплата звёздами:** чтобы пользователи могли платить за генерации, настрой webhook для бота (см. раздел «Оплата звёздами» ниже).
+6. Сохрани и дождись деплоя. Открой **Deployments** → последний деплой → **View Logs** (Runtime): при старте должна появиться строка **`FFmpeg: OK`**. Если видишь **`FFmpeg: not found`** — образ собран без FFmpeg (вероятно, использовался Nixpacks); переключи Builder на Dockerfile и сделай **Redeploy**.
+7. Скопируй **публичный URL** сервиса — он будет вида **`https://имя-сервиса.up.railway.app`**. Это твой **API URL**.
+8. **Оплата звёздами:** чтобы пользователи могли платить за генерации, настрой webhook для бота (см. раздел «Оплата звёздами» ниже).
 
 ### Вариант B: Render
 
@@ -187,6 +187,7 @@
 
 5. **Возврат звёзд при падении**
    - Если джоб падает (ошибка генерации, FFmpeg, content filter и т.д.), звёзды за эту генерацию **возвращаются автоматически** через Telegram API (`refundStarPayment`). Пользователю не нужно ничего делать — звёзды снова появятся на балансе.
+   - Для джобов, которые упали **до** деплоя автовозврата, можно вручную вернуть звёзды в админке: вкладка «Джобы» → у failed-джоба кнопка «Вернуть звёзды» (вызов `POST /admin/jobs/:jobId/refund`).
 
 ---
 
@@ -314,7 +315,7 @@
 
 | Что видишь | Что сделать |
 |------------|-------------|
-| **Ошибка `spawn ffmpeg ENOENT`** или в логах **FFmpeg: not found** | В проекте сборка API через **Dockerfile** (в `railway.toml` указан `builder = "dockerfile"`), в Dockerfile уже стоит установка FFmpeg. Убедись, что в Railway у сервиса api **не переопределён** способ сборки (должен использоваться Dockerfile из репо). Сделай **Redeploy** после пуша. |
+| **Ошибка `spawn ffmpeg ENOENT`** или в логах **FFmpeg: not found** | В репо в `apps/api` есть **Dockerfile** с установкой FFmpeg. В Railway у сервиса api: **Settings** → **Build** → **Builder** выбери **Dockerfile** (не Nixpacks). Сохрани и сделай **Redeploy**. |
 | **Ошибка про API key / 401 / invalid / quota** | В Railway у сервиса api в **Variables** задай хотя бы один вариант: **OPENAI_API_KEY** (сценарии + картинки + TTS) или **GROQ_API_KEY** (сценарии) + **REPLICATE_API_TOKEN** (картинки). Без ни одного рабочего ключа генерация сценария или картинки может упасть. Проверь, что ключи без опечаток и не истекли. |
 | **Джоб в статусе `queued` или `processing` и не меняется** | Сервер мог перезапуститься во время обработки. В логах посмотри, есть ли **Video job starting** для этого id. Если после старта приложения новых записей «Video job starting» нет — возможно, webhook не вызвал очередь или запрос пришёл на другой инстанс. Создай **новую** генерацию (и при необходимости оплати снова); старые «зависшие» джобы можно не трогать. |
 | **Ошибка записи файла / EACCES / ENOSPC** | На Railway диск временный. Убедись, что **STORAGE_PATH** (если задан) доступен для записи. Для продакшена можно подключить **Volume** и указать путь в нём. |
@@ -336,13 +337,10 @@
 
 ---
 
-## Всё ещё «spawn ffmpeg ENOENT» — принудительно Dockerfile
+## Всё ещё «spawn ffmpeg ENOENT» или Builder нельзя сменить с Nixpacks
 
-В корне репо добавлены **`Dockerfile.api`** и **`railway.toml`** (и при сборке из корня — **`nixpacks.toml`** с FFmpeg). Если после пуша и Redeploy ошибка не пропала, задай сборку вручную:
+Если в Railway пишет «The value is set in apps/api/railway.toml» и не даёт выбрать Dockerfile:
 
-1. Railway → сервис **api** → **Settings**.
-2. Найди блок **Build** (или **Deploy** / **Custom Build**).
-3. Если есть поле **Dockerfile Path** или **Dockerfile path**: укажи **`Dockerfile.api`** (если сервис собирается из корня) или оставь **`Dockerfile`** (если Root Directory = **`apps/api`**).
-4. Если есть **Builder** / **Build method**: выбери **Dockerfile** (не Nixpacks).
-5. **Root Directory:** либо **пусто** (корень — тогда будет использоваться корневой `Dockerfile.api`), либо **`apps/api`** (тогда — `apps/api/Dockerfile`).
-6. Сохрани и сделай **Redeploy**. В **Build Logs** должны быть шаги с `apt-get install ffmpeg` или `RUN` из Dockerfile. В **Deploy Logs** при старте — строка **FFmpeg: OK**.
+1. **Собери API из корня репо:** Railway → сервис **api** → **Settings** → **Root Directory** — **очисти поле** (оставь пустым). Сохрани и сделай **Redeploy**.
+2. При пустом Root Directory Railway возьмёт конфиг из **корня**: **`railway.toml`** (builder = dockerfile) и **`Dockerfile`** — в образ попадёт FFmpeg.
+3. В **Build Logs** после деплоя должны быть шаги с `apt-get install ffmpeg`. В **Deploy Logs** при старте — строка **FFmpeg: OK**.

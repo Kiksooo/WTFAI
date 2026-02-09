@@ -1,6 +1,7 @@
-# Для API: Root Directory пустой — в корне используется Dockerfile (с FFmpeg).
+# Явно задаём Dockerfile (с FFmpeg), чтобы Railway не использовал Nixpacks.
 [build]
 builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "node dist/index.js"

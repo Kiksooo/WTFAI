@@ -214,6 +214,25 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  /** Вручную вернуть звёзды за failed-джоб (если автовозврат не сработал). */
+  app.post<{ Params: { jobId: string } }>('/jobs/:jobId/refund', async (request, reply) => {
+    try {
+      const { jobId } = request.params;
+      const job = await prisma.generationJob.findUnique({ where: { id: jobId } });
+      if (!job) return reply.status(404).send({ error: 'Job not found' });
+      if (job.status !== 'failed') return reply.status(400).send({ error: 'Refund only for failed jobs' });
+      const payment = await prisma.payment.findFirst({ where: { jobId } });
+      if (!payment) return reply.status(404).send({ error: 'No payment for this job' });
+      const { refundStarsPayment } = await import('../services/telegram-payment.js');
+      const ok = await refundStarsPayment(payment.userId, payment.telegramPaymentChargeId);
+      if (!ok) return reply.status(502).send({ error: 'Telegram refund failed' });
+      return reply.send({ ok: true, message: 'Stars refunded' });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Refund failed' });
+    }
+  });
+
   /** Список донатов (tips) */
   app.get<{ Querystring: { limit?: string; offset?: string } }>('/tips', async (request, reply) => {
     try {

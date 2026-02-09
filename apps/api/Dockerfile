@@ -6,8 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+# В монорепо lockfile в корне; здесь только package.json — используем npm install
+COPY package.json ./
+RUN npm install
 
 COPY prisma ./prisma/
 RUN npx prisma generate

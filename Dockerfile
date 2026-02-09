@@ -1,4 +1,4 @@
-# Сборка API с FFmpeg. Используется, если Railway собирает из корня репо (без Root Directory).
+# Сборка API с FFmpeg. Railway при пустом Root Directory ищет именно Dockerfile в корне.
 FROM node:20-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
