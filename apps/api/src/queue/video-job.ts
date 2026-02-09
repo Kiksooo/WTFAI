@@ -34,7 +34,7 @@ async function processNext(): Promise<void> {
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error('Video job failed:', payload.jobId, errMsg, err);
-    const errorForDb = errMsg.slice(0, 500);
+    const errorForDb = errMsg.slice(0, 2000);
     try {
       await prisma.generationJob.update({
         where: { id: payload.jobId },

@@ -101,7 +101,10 @@ async function composeVideoWithAudio(
     for (let i = 0; i < absImages.length; i++) {
       const segPath = path.join(segmentDir, `seg_${i}.mp4`);
       const D = durations[i];
-      // Картинка D сек + аудио (обрезать/дополнить тишиной до D)
+      // Картинка D сек + аудио (нормализуем формат, обрезаем/дополняем тишиной до D)
+      const filterComplex =
+        `[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p[v];` +
+        `[1:a]aformat=channel_layouts=stereo:sample_fmts=fltp:sample_rates=44100,atrim=0:${D},apad=whole_dur=${D}[a]`;
       const args = [
         '-y',
         '-loop',
@@ -113,7 +116,7 @@ async function composeVideoWithAudio(
         '-i',
         absAudios[i],
         '-filter_complex',
-        `[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p[v];[1:a]atrim=0:${D},apad=whole_dur=${D}[a]`,
+        filterComplex,
         '-map',
         '[v]',
         '-map',
