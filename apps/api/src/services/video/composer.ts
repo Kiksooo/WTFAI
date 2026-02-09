@@ -64,12 +64,13 @@ async function composeSilentVideo(
 ): Promise<void> {
   if (absPaths.length === 1) {
     const D = durations[0];
+    // scale+pad без выражений (pad без x,y центрирует) — совместимость с FFmpeg в контейнере
     await runFfmpeg([
       '-y',
       '-loop', '1',
       '-t', String(D),
       '-i', absPaths[0],
-      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p`,
+      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H},format=yuv420p`,
       '-c:v', 'libx264',
       '-r', '30',
       '-pix_fmt', 'yuv420p',
