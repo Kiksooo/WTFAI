@@ -68,6 +68,8 @@ export const generateRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    if (!dbUser) return reply.status(500).send({ error: 'User not found' });
+
     const now = new Date();
     const hasActiveSubscription =
       dbUser.subscriptionExpiresAt && new Date(dbUser.subscriptionExpiresAt) > now

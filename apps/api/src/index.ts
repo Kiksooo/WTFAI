@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
+import fs from 'fs/promises';
 import { execSync } from 'child_process';
 import { config } from './config.js';
 import { telegramAuth } from './middleware/telegram-auth.js';
@@ -34,8 +35,10 @@ const app = Fastify({ logger: true });
 try {
   execSync('ffmpeg -version', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
   app.log.info('FFmpeg: OK');
+  console.log('FFmpeg: OK');
 } catch {
   app.log.warn('FFmpeg: not found in PATH — генерация видео будет падать с ENOENT');
+  console.warn('FFmpeg: not found in PATH — генерация видео будет падать с ENOENT');
 }
 
 app.setErrorHandler((err, request, reply) => {
@@ -49,8 +52,10 @@ await app.register(cors, {
   origin: true,
   allowedHeaders: ['Content-Type', 'X-Telegram-Init-Data', 'X-Admin-Key'],
 });
+const staticRoot = path.resolve(process.cwd(), config.storagePath);
+await fs.mkdir(staticRoot, { recursive: true });
 await app.register(fastifyStatic, {
-  root: path.resolve(process.cwd(), config.storagePath),
+  root: staticRoot,
   prefix: '/static/',
 });
 await app.register(telegramAuth);

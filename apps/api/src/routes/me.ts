@@ -83,6 +83,8 @@ export const meRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      if (!dbUser) return reply.status(500).send({ error: 'User not found' });
+
       if (refCode && !dbUser.referredById) {
         const referrer = await prisma.user.findFirst({
           where: { referralCode: refCode },
