@@ -8,7 +8,9 @@ function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
     execFile('ffmpeg', args, (err, _stdout, stderr) => {
       if (err) {
-        const msg = stderr && String(stderr).trim() ? `${err.message}\n${String(stderr)}` : err.message;
+        const stderrStr = stderr ? String(stderr).trim() : '';
+        const msg = stderrStr ? `${err.message}\n${stderrStr}` : err.message;
+        console.error('FFmpeg failed. Full stderr:', stderrStr || '(empty)');
         reject(new Error(msg));
       } else {
         resolve();
@@ -64,13 +66,13 @@ async function composeSilentVideo(
 ): Promise<void> {
   if (absPaths.length === 1) {
     const D = durations[0];
-    // scale+pad без выражений (pad без x,y центрирует) — совместимость с FFmpeg в контейнере
+    // Только scale в размер 1080x1920 + yuv420p — без pad, без выражений
     await runFfmpeg([
       '-y',
       '-loop', '1',
       '-t', String(D),
       '-i', absPaths[0],
-      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H},format=yuv420p`,
+      '-vf', `scale=${W}:${H},format=yuv420p`,
       '-c:v', 'libx264',
       '-r', '30',
       '-pix_fmt', 'yuv420p',
