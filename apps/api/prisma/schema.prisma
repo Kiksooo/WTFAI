@@ -65,6 +65,7 @@ model GenerationJob {
   userId    BigInt
   prompt    String
   status    String   // awaiting_payment | queued | processing | done | failed
+  progress  Int?    // 0–100 для прогресс-бара
   videoId   String?
   error     String?
   createdAt DateTime @default(now())

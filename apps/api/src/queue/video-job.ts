@@ -61,29 +61,43 @@ async function processNext(): Promise<void> {
   }
 }
 
+async function setProgress(jobId: string, progress: number): Promise<void> {
+  await prisma.generationJob.update({
+    where: { id: jobId },
+    data: { progress },
+  });
+}
+
 async function processVideoJob(payload: VideoJobPayload): Promise<void> {
   await prisma.generationJob.update({
     where: { id: payload.jobId },
-    data: { status: 'processing' },
+    data: { status: 'processing', progress: 5 },
   });
 
-  const scenes = await aiProvider.generateScript(payload.prompt);
+  // Быстрый режим: 1 сцена 5–6 сек, параллельно картинка + озвучка
+  const scenes = await aiProvider.generateScript(payload.prompt, { fast: true });
+  await setProgress(payload.jobId, 20);
+
   const sceneImages: { path: string }[] = [];
   const sceneAudios: { path: string }[] = [];
 
-  for (let i = 0; i < scenes.length; i++) {
-    const imageBuffer = await aiProvider.generateSceneImage(scenes[i].visual);
-    const relPath = await saveBuffer(imageBuffer, 'scenes', '.png');
-    sceneImages.push({ path: relPath });
-
-    const audioBuffer = await aiProvider.generateSceneAudio(scenes[i].text);
-    if (audioBuffer && audioBuffer.length > 0) {
-      const audioPath = await saveBuffer(audioBuffer, 'audio', '.mp3');
-      sceneAudios.push({ path: audioPath });
-    } else {
-      sceneAudios.push({ path: '' });
-    }
-  }
+  await Promise.all(
+    scenes.map(async (scene, i) => {
+      const [imageBuffer, audioBuffer] = await Promise.all([
+        aiProvider.generateSceneImage(scene.visual),
+        aiProvider.generateSceneAudio(scene.text),
+      ]);
+      const relPath = await saveBuffer(imageBuffer, 'scenes', '.png');
+      sceneImages.push({ path: relPath });
+      if (audioBuffer && audioBuffer.length > 0) {
+        const audioPath = await saveBuffer(audioBuffer, 'audio', '.mp3');
+        sceneAudios.push({ path: audioPath });
+      } else {
+        sceneAudios.push({ path: '' });
+      }
+    })
+  );
+  await setProgress(payload.jobId, 55);
 
   const videoRelPath = `videos/${payload.jobId}.mp4`;
   const audiosToUse =
@@ -91,6 +105,7 @@ async function processVideoJob(payload: VideoJobPayload): Promise<void> {
       ? sceneAudios
       : undefined;
 
+  await setProgress(payload.jobId, 75);
   await composeVideo({
     sceneImages,
     scenes,
@@ -112,6 +127,6 @@ async function processVideoJob(payload: VideoJobPayload): Promise<void> {
 
   await prisma.generationJob.update({
     where: { id: payload.jobId },
-    data: { status: 'done', videoId: video.id },
+    data: { status: 'done', videoId: video.id, progress: 100 },
   });
 }

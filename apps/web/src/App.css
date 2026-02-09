@@ -204,9 +204,25 @@
   color: #ef4444;
 }
 
+.generate-status-wrap {
+  margin-top: 0.5rem;
+}
 .generate-status {
   font-size: 14px;
   color: #8b5cf6;
+  margin: 0 0 0.5rem 0;
+}
+.generate-progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.generate-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  border-radius: 3px;
+  transition: width 0.25s ease;
 }
 
 .generate-btn {

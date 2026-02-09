@@ -7,7 +7,7 @@ interface GenerateScreenProps {
   onGenerated?: (jobId: string) => void;
 }
 
-const POLL_INTERVAL_MS = 2500;
+const POLL_INTERVAL_MS = 800;
 const POLL_MAX_ATTEMPTS = 120;
 
 export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
@@ -17,6 +17,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
   const [submitting, setSubmitting] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<JobResponse['status'] | null>(null);
+  const [progress, setProgress] = useState<number>(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
         .getJob(jobId)
         .then((job: JobResponse) => {
           setJobStatus(job.status);
+          if (typeof job.progress === 'number') setProgress(job.progress);
           if (job.status === 'done' && job.videoId) {
             if (pollRef.current) clearInterval(pollRef.current);
             onGenerated?.(jobId);
@@ -72,6 +74,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
       setSubmitting(true);
       setError(null);
       setJobStatus(null);
+        setProgress(0);
       try {
         const res = await api.createPaymentInvoice(prompt.trim());
         setJobId(res.jobId);
@@ -91,6 +94,7 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
     setSubmitting(true);
     setError(null);
     setJobStatus(null);
+    setProgress(0);
     try {
       const res = await api.generate(prompt.trim());
       setJobId(res.jobId);
@@ -139,11 +143,18 @@ export function GenerateScreen({ onBack, onGenerated }: GenerateScreenProps) {
         )}
         {error && <p className="generate-error">{error}</p>}
         {jobId && jobStatus && (
-          <p className="generate-status">
-            {jobStatus === 'awaiting_payment' && 'Ожидаем оплату…'}
-            {jobStatus === 'queued' && 'В очереди…'}
-            {jobStatus === 'processing' && 'Генерируем видео…'}
-          </p>
+          <div className="generate-status-wrap">
+            <p className="generate-status">
+              {jobStatus === 'awaiting_payment' && 'Ожидаем оплату…'}
+              {jobStatus === 'queued' && 'В очереди…'}
+              {jobStatus === 'processing' && 'Генерируем видео…'}
+            </p>
+            {(jobStatus === 'queued' || jobStatus === 'processing') && (
+              <div className="generate-progress-bar" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
+                <div className="generate-progress-fill" style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
+              </div>
+            )}
+          </div>
         )}
         <button
           type="submit"

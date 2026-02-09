@@ -18,6 +18,7 @@ export const jobRoutes: FastifyPluginAsync = async (app) => {
     return reply.send({
       jobId: job.id,
       status: job.status,
+      progress: job.progress ?? undefined,
       videoId: job.videoId ?? undefined,
       error: job.error ?? undefined,
     });

@@ -165,9 +165,9 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               <h3 className="profile-section-title">Подписки</h3>
               <div className="profile-sub-cards">
                 <div className="profile-sub-card">
-                  <h4>Basic — $9.99/мес</h4>
+                  <h4>Basic — $2.99/мес</h4>
                   <ul>
-                    <li>50–100 видео в месяц</li>
+                    <li>32 видео в месяц</li>
                     <li>Без watermark</li>
                     <li>Приоритетная очередь</li>
                     <li>Эксклюзивные шаблоны</li>
@@ -182,9 +182,9 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                   </button>
                 </div>
                 <div className="profile-sub-card profile-sub-card-vip">
-                  <h4>VIP — $19.99/мес</h4>
+                  <h4>VIP — $9.99/мес</h4>
                   <ul>
-                    <li>300 видео в месяц</li>
+                    <li>100 видео в месяц</li>
                     <li>Максимальное качество</li>
                     <li>Приватные генерации</li>
                     <li>Early access к форматам</li>

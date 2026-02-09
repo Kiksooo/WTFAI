@@ -18,12 +18,12 @@ export const config = {
   dailyLimitPremium: parseInt(process.env.DAILY_LIMIT_PREMIUM ?? '20', 10),
   /** Оплата звёздами: сколько звёзд за одну генерацию (Telegram Stars, XTR) */
   paymentStarsPerGeneration: parseInt(process.env.PAYMENT_STARS_PER_GENERATION ?? '5', 10),
-  /** Подписка Basic ($9.99/мес): лимит видео в месяц, цена в звёздах за месяц */
-  basicMonthlyVideos: parseInt(process.env.BASIC_MONTHLY_VIDEOS ?? '75', 10),
-  basicPriceStars: parseInt(process.env.BASIC_PRICE_STARS ?? '100', 10),
-  /** Подписка VIP ($19.99/мес): лимит видео, цена в звёздах */
-  vipMonthlyVideos: parseInt(process.env.VIP_MONTHLY_VIDEOS ?? '300', 10),
-  vipPriceStars: parseInt(process.env.VIP_PRICE_STARS ?? '200', 10),
+  /** Подписка Basic ($2.99/мес): 32 видео/мес — при полном использовании маржа ~24% (себестоимость ~$0.05/видео) */
+  basicMonthlyVideos: parseInt(process.env.BASIC_MONTHLY_VIDEOS ?? '32', 10),
+  basicPriceStars: parseInt(process.env.BASIC_PRICE_STARS ?? '230', 10),
+  /** Подписка VIP ($9.99/мес): 100 видео/мес — при полном использовании маржа ~28% */
+  vipMonthlyVideos: parseInt(process.env.VIP_MONTHLY_VIDEOS ?? '100', 10),
+  vipPriceStars: parseInt(process.env.VIP_PRICE_STARS ?? '770', 10),
   /** Секрет для проверки webhook от Telegram (X-Telegram-Bot-Api-Secret-Token). Задай при настройке setWebhook. */
   webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET ?? '',
   /** В dev: пропускать проверку Telegram, подставлять тестового пользователя (только для локальной разработки) */

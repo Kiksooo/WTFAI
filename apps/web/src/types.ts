@@ -66,6 +66,7 @@ export interface GenerateResponse {
 export interface JobResponse {
   jobId: string;
   status: 'awaiting_payment' | 'queued' | 'processing' | 'done' | 'failed';
+  progress?: number;
   videoId?: string;
   error?: string;
 }
