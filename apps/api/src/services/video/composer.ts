@@ -1,11 +1,21 @@
 import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs/promises';
-import { promisify } from 'util';
 import type { Scene } from '../ai/types.js';
 import { getAbsolutePath } from '../storage.js';
 
-const exec = promisify(execFile);
+function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    execFile('ffmpeg', args, (err, _stdout, stderr) => {
+      if (err) {
+        const msg = stderr && String(stderr).trim() ? `${err.message}\n${String(stderr)}` : err.message;
+        reject(new Error(msg));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 
 const W = 1080;
 const H = 1920;
@@ -60,7 +70,7 @@ async function composeSilentVideo(
   for (let i = 0; i < absPaths.length; i++) {
     inputs.push('-loop', '1', '-t', String(durations[i]), '-i', absPaths[i]);
   }
-  await exec('ffmpeg', [
+  await runFfmpeg([
     '-y',
     ...inputs,
     '-filter_complex',
@@ -118,7 +128,7 @@ async function composeVideoWithAudio(
         String(D),
         segPath,
       ];
-      await exec('ffmpeg', args);
+      await runFfmpeg(args);
     }
 
     const listPath = path.join(segmentDir, 'list.txt');
@@ -131,7 +141,7 @@ async function composeVideoWithAudio(
       .join('\n');
     await fs.writeFile(listPath, listContent, 'utf8');
 
-    await exec('ffmpeg', [
+    await runFfmpeg([
       '-y',
       '-f',
       'concat',

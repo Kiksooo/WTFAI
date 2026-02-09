@@ -26,6 +26,7 @@ export function getPublicUrl(relativePath: string): string {
   return `${config.baseUrl}/static/${normalized}`;
 }
 
+/** Всегда возвращает абсолютный путь, чтобы FFmpeg и другие процессы находили файлы при любом cwd. */
 export function getAbsolutePath(relativePath: string): string {
-  return path.join(config.storagePath, relativePath);
+  return path.resolve(config.storagePath, relativePath);
 }
