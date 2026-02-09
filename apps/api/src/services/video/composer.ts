@@ -43,7 +43,12 @@ export async function composeVideo(input: ComposeInput): Promise<string> {
 
   if (hasAudio) {
     const absAudios = input.sceneAudios!.map((a) => getAbsolutePath(a.path));
-    await composeVideoWithAudio(absImages, absAudios, durations, fullOutputPath);
+    try {
+      await composeVideoWithAudio(absImages, absAudios, durations, fullOutputPath);
+    } catch (err) {
+      console.warn('Compose with audio failed, falling back to silent video:', err instanceof Error ? err.message : err);
+      await composeSilentVideo(absImages, durations, fullOutputPath);
+    }
   } else {
     await composeSilentVideo(absImages, durations, fullOutputPath);
   }
@@ -101,10 +106,10 @@ async function composeVideoWithAudio(
     for (let i = 0; i < absImages.length; i++) {
       const segPath = path.join(segmentDir, `seg_${i}.mp4`);
       const D = durations[i];
-      // Картинка D сек + аудио (нормализуем формат, обрезаем/дополняем тишиной до D)
+      // Картинка D сек + аудио: atrim до D, затем apad до D сек. aresample для совместимости с aac.
       const filterComplex =
         `[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p[v];` +
-        `[1:a]aformat=channel_layouts=stereo:sample_fmts=fltp:sample_rates=44100,atrim=0:${D},apad=whole_dur=${D}[a]`;
+        `[1:a]aresample=44100,atrim=0:${D},apad=whole_dur=${D}[a]`;
       const args = [
         '-y',
         '-loop',
