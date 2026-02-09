@@ -56,12 +56,28 @@ export async function composeVideo(input: ComposeInput): Promise<string> {
   return input.outputRelativePath;
 }
 
-/** Сборка видео без звука (как раньше). */
+/** Сборка видео без звука. Для одной сцены — без concat (совместимость с FFmpeg в контейнере). */
 async function composeSilentVideo(
   absPaths: string[],
   durations: number[],
   outputPath: string
 ): Promise<void> {
+  if (absPaths.length === 1) {
+    const D = durations[0];
+    await runFfmpeg([
+      '-y',
+      '-loop', '1',
+      '-t', String(D),
+      '-i', absPaths[0],
+      '-vf', `scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,format=yuv420p`,
+      '-c:v', 'libx264',
+      '-r', '30',
+      '-pix_fmt', 'yuv420p',
+      outputPath,
+    ]);
+    return;
+  }
+
   const filterParts: string[] = [];
   for (let i = 0; i < absPaths.length; i++) {
     filterParts.push(
