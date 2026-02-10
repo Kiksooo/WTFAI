@@ -144,6 +144,11 @@ export const api = {
   getMyVideos: () =>
     request<{ items: import('../types').VideoItem[] }>('/my-videos'),
 
+  deleteMyVideo: (videoId: string) =>
+    request<{ ok: boolean }>(`/my-videos/${videoId}`, {
+      method: 'DELETE',
+    }),
+
   like: (videoId: string) =>
     request<import('../types').LikeResponse>('/like', {
       method: 'POST',

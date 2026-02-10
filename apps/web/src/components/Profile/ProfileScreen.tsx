@@ -99,6 +99,17 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
     );
   };
 
+  const handleDeleteVideo = async (id: string) => {
+    if (!window.confirm('Удалить это видео без возможности восстановления?')) return;
+    setError(null);
+    try {
+      await api.deleteMyVideo(id);
+      setItems((prev) => prev.filter((v) => v.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось удалить видео');
+    }
+  };
+
   return (
     <div className="profile-screen">
       <header className="screen-header">
@@ -288,26 +299,35 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             {items.length > 0 && (
               <div className="profile-grid">
                 {items.map((video) => (
-                  <a
-                    key={video.id}
-                    href={video.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="profile-card"
-                  >
-                    <video
-                      src={video.videoUrl}
-                      poster={video.previewUrl ?? undefined}
-                      muted
-                      playsInline
-                      preload="metadata"
-                      className="profile-card-video"
-                    />
-                    <div className="profile-card-stats">
-                      <span>❤️ {video.likesCount}</span>
-                      <span>👁 {video.viewsCount}</span>
-                    </div>
-                  </a>
+                  <div key={video.id} className="profile-card">
+                    <button
+                      type="button"
+                      className="profile-card-delete"
+                      aria-label="Удалить видео"
+                      onClick={() => handleDeleteVideo(video.id)}
+                    >
+                      ✕
+                    </button>
+                    <a
+                      href={video.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="profile-card-link"
+                    >
+                      <video
+                        src={video.videoUrl}
+                        poster={video.previewUrl ?? undefined}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="profile-card-video"
+                      />
+                      <div className="profile-card-stats">
+                        <span>❤️ {video.likesCount}</span>
+                        <span>👁 {video.viewsCount}</span>
+                      </div>
+                    </a>
+                  </div>
                 ))}
               </div>
             )}

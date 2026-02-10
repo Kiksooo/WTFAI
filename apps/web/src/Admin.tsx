@@ -69,7 +69,21 @@ function useAdminApi(apiBase: string, adminKey: string) {
     },
     [apiBase, adminKey]
   );
-  return { request: get, requestPost: post };
+  const del = useCallback(
+    async (path: string): Promise<unknown> => {
+      const res = await fetch(`${apiBase}${path}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Key': adminKey },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? res.statusText);
+      }
+      return res.json();
+    },
+    [apiBase, adminKey]
+  );
+  return { request: get, requestPost: post, requestDelete: del };
 }
 
 export default function Admin() {
@@ -89,7 +103,7 @@ export default function Admin() {
   const [refundError, setRefundError] = useState<string | null>(null);
   const [tab, setTab] = useState<'stats' | 'users' | 'videos' | 'jobs' | 'payments' | 'tips' | 'feedback'>('stats');
 
-  const { request, requestPost } = useAdminApi(apiBase, adminKey);
+  const { request, requestPost, requestDelete } = useAdminApi(apiBase, adminKey);
 
   const loadStats = useCallback(() => {
     if (!adminKey) return;
@@ -381,6 +395,7 @@ export default function Admin() {
                       <th>Лайки</th>
                       <th>Просмотры</th>
                       <th>Создан</th>
+                      <th>Действие</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -391,6 +406,20 @@ export default function Admin() {
                         <td>{v.likesCount}</td>
                         <td>{v.viewsCount}</td>
                         <td>{new Date(v.createdAt).toLocaleString()}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-small admin-btn-danger"
+                            onClick={() => {
+                              if (!window.confirm('Удалить это видео без возможности восстановления?')) return;
+                              requestDelete(`/admin/videos/${v.id}`)
+                                .then(() => loadVideos())
+                                .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

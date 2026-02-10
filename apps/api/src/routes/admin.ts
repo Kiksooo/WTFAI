@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../db/index.js';
+import { deleteFile } from '../services/storage.js';
 
 function getAdminKey(headers: Record<string, string | string[] | undefined>): string {
   const v = headers['x-admin-key'] ?? headers['x-admin-key'.toLowerCase()];
@@ -18,6 +19,13 @@ function checkAdmin(request: { headers: Record<string, string | string[] | undef
     return true;
   }
   return false;
+}
+
+function extractRelativeFromUrl(url: string | null): string | null {
+  if (!url) return null;
+  const prefix = `${config.baseUrl}/static/`;
+  if (url.startsWith(prefix)) return url.slice(prefix.length);
+  return null;
 }
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
@@ -174,6 +182,24 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     } catch (err) {
       app.log.error(err);
       return reply.status(500).send({ error: 'Failed to load videos' });
+    }
+  });
+
+  // Удалить видео (админ) + файлы
+  app.delete<{ Params: { videoId: string } }>('/videos/:videoId', async (request, reply) => {
+    try {
+      const video = await prisma.video.findUnique({ where: { id: request.params.videoId } });
+      if (!video) return reply.status(404).send({ error: 'Video not found' });
+
+      const relVideo = extractRelativeFromUrl(video.videoUrl);
+      const relPreview = extractRelativeFromUrl(video.previewUrl);
+      await Promise.all([deleteFile(relVideo), deleteFile(relPreview)]);
+
+      await prisma.video.delete({ where: { id: video.id } });
+      return reply.send({ ok: true });
+    } catch (err) {
+      app.log.error(err);
+      return reply.status(500).send({ error: 'Failed to delete video' });
     }
   });
 

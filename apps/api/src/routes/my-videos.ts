@@ -1,5 +1,14 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../db/index.js';
+import { config } from '../config.js';
+import { deleteFile } from '../services/storage.js';
+
+function extractRelativeFromUrl(url: string | null): string | null {
+  if (!url) return null;
+  const prefix = `${config.baseUrl}/static/`;
+  if (url.startsWith(prefix)) return url.slice(prefix.length);
+  return null;
+}
 
 export const myVideosRoutes: FastifyPluginAsync = async (app) => {
   app.get('/', async (request, reply) => {
@@ -22,5 +31,25 @@ export const myVideosRoutes: FastifyPluginAsync = async (app) => {
     }));
 
     return reply.send({ items });
+  });
+
+  // Удалить своё видео + файлы
+  app.delete<{ Params: { videoId: string } }>('/:videoId', async (request, reply) => {
+    const user = request.telegramUser;
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const video = await prisma.video.findFirst({
+      where: { id: request.params.videoId, createdById: BigInt(user.id) },
+    });
+    if (!video) return reply.status(404).send({ error: 'Video not found' });
+
+    const relVideo = extractRelativeFromUrl(video.videoUrl);
+    const relPreview = extractRelativeFromUrl(video.previewUrl);
+
+    await Promise.all([deleteFile(relVideo), deleteFile(relPreview)]);
+
+    await prisma.video.delete({ where: { id: video.id } });
+
+    return reply.send({ ok: true });
   });
 };

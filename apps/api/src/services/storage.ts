@@ -30,3 +30,14 @@ export function getPublicUrl(relativePath: string): string {
 export function getAbsolutePath(relativePath: string): string {
   return path.resolve(config.storagePath, relativePath);
 }
+
+/** Безопасно удаляет файл по относительному пути (subdir/filename). Ошибки игнорируются. */
+export async function deleteFile(relativePath: string | null | undefined): Promise<void> {
+  if (!relativePath) return;
+  const abs = getAbsolutePath(relativePath);
+  try {
+    await fs.unlink(abs);
+  } catch {
+    // ignore (файла могло уже не быть)
+  }
+}
