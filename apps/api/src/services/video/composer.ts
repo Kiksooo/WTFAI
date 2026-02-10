@@ -21,8 +21,9 @@ function runFfmpeg(args: string[]): Promise<void> {
   });
 }
 
-const W = 1080;
-const H = 1920;
+// Уменьшаем разрешение и FPS, чтобы укладываться в лимиты Railway
+const W = 720;
+const H = 1280;
 
 export interface ComposeInput {
   sceneImages: { path: string }[];
@@ -76,7 +77,7 @@ async function composeSilentVideo(
       '-i', absPaths[0],
       '-vf', `scale=${W}:${H},format=yuv420p`,
       '-c:v', 'libx264',
-      '-r', '30',
+      '-r', '24',
       '-pix_fmt', 'yuv420p',
       outputPath,
     ]);
@@ -106,7 +107,7 @@ async function composeSilentVideo(
     '-c:v',
     'libx264',
     '-r',
-    '30',
+    '24',
     '-pix_fmt',
     'yuv420p',
     outputPath,
@@ -150,7 +151,7 @@ async function composeVideoWithAudio(
         '-c:v',
         'libx264',
         '-r',
-        '30',
+        '24',
         '-c:a',
         'aac',
         '-t',
