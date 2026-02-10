@@ -14,7 +14,16 @@ export const config = {
   replicateApiToken: process.env.REPLICATE_API_TOKEN ?? '',
   /** Railway и др.: образ read-only, пишем в /tmp. Локально — ./uploads */
   storagePath: process.env.STORAGE_PATH ?? (process.env.RAILWAY_ENVIRONMENT != null ? '/tmp/uploads' : './uploads'),
-  baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
+  /** Публичный URL API (для ссылок на видео). На Railway — задать BASE_URL или используется RAILWAY_PUBLIC_DOMAIN. */
+  baseUrl: (() => {
+    const env = process.env.BASE_URL?.trim();
+    if (env) return env.replace(/\/+$/, '');
+    if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+      const d = process.env.RAILWAY_PUBLIC_DOMAIN.trim();
+      return d.startsWith('http') ? d.replace(/\/+$/, '') : `https://${d}`;
+    }
+    return 'http://localhost:3000';
+  })(),
   dailyLimitFree: parseInt(process.env.DAILY_LIMIT_FREE ?? '2', 10),
   dailyLimitPremium: parseInt(process.env.DAILY_LIMIT_PREMIUM ?? '20', 10),
   /** Оплата звёздами: сколько звёзд за одну генерацию (Telegram Stars, XTR) */

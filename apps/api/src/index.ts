@@ -57,6 +57,10 @@ await fs.mkdir(staticRoot, { recursive: true });
 await app.register(fastifyStatic, {
   root: staticRoot,
   prefix: '/static/',
+  setHeaders: (res) => {
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+  },
 });
 await app.register(telegramAuth);
 await app.register(feedRoutes, { prefix: '/feed' });

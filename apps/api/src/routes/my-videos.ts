@@ -1,13 +1,12 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../db/index.js';
-import { config } from '../config.js';
-import { deleteFile } from '../services/storage.js';
+import { deleteFile, ensurePublicUrl } from '../services/storage.js';
 
 function extractRelativeFromUrl(url: string | null): string | null {
   if (!url) return null;
-  const prefix = `${config.baseUrl}/static/`;
-  if (url.startsWith(prefix)) return url.slice(prefix.length);
-  return null;
+  const i = url.indexOf('/static/');
+  if (i === -1) return null;
+  return url.slice(i + '/static/'.length);
 }
 
 export const myVideosRoutes: FastifyPluginAsync = async (app) => {
@@ -23,8 +22,8 @@ export const myVideosRoutes: FastifyPluginAsync = async (app) => {
     const items = videos.map((v) => ({
       id: v.id,
       prompt: v.prompt,
-      videoUrl: v.videoUrl,
-      previewUrl: v.previewUrl,
+      videoUrl: ensurePublicUrl(v.videoUrl) ?? v.videoUrl,
+      previewUrl: ensurePublicUrl(v.previewUrl) ?? v.previewUrl,
       likesCount: v.likesCount,
       viewsCount: v.viewsCount,
       createdAt: v.createdAt.toISOString(),

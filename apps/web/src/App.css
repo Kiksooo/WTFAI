@@ -42,6 +42,25 @@
   object-fit: cover;
 }
 
+.video-player--empty,
+.video-player--error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1a1a1a;
+  color: #888;
+  font-size: 14px;
+}
+
+.video-player__link {
+  color: var(--tg-theme-link-color, #2481cc);
+  font-size: 13px;
+}
+
 .reel-card-overlay {
   position: absolute;
   right: 12px;

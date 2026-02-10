@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { config } from '../config.js';
 import { prisma } from '../db/index.js';
-import { deleteFile } from '../services/storage.js';
+import { deleteFile, ensurePublicUrl } from '../services/storage.js';
 
 function getAdminKey(headers: Record<string, string | string[] | undefined>): string {
   const v = headers['x-admin-key'] ?? headers['x-admin-key'.toLowerCase()];
@@ -23,9 +23,9 @@ function checkAdmin(request: { headers: Record<string, string | string[] | undef
 
 function extractRelativeFromUrl(url: string | null): string | null {
   if (!url) return null;
-  const prefix = `${config.baseUrl}/static/`;
-  if (url.startsWith(prefix)) return url.slice(prefix.length);
-  return null;
+  const i = url.indexOf('/static/');
+  if (i === -1) return null;
+  return url.slice(i + '/static/'.length);
 }
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
@@ -87,7 +87,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         recentVideos: recentVideos.map((v) => ({
           id: v.id,
           prompt: v.prompt,
-          videoUrl: v.videoUrl,
+          videoUrl: ensurePublicUrl(v.videoUrl) ?? v.videoUrl,
           likesCount: v.likesCount,
           createdAt: v.createdAt.toISOString(),
           createdBy: v.createdBy ? { id: String(v.createdBy.id), username: v.createdBy.username, firstName: v.createdBy.firstName } : null,
@@ -168,8 +168,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         items: videos.map((v) => ({
           id: v.id,
           prompt: v.prompt,
-          videoUrl: v.videoUrl,
-          previewUrl: v.previewUrl,
+          videoUrl: ensurePublicUrl(v.videoUrl) ?? v.videoUrl,
+          previewUrl: ensurePublicUrl(v.previewUrl) ?? v.previewUrl,
           likesCount: v.likesCount,
           viewsCount: v.viewsCount,
           createdAt: v.createdAt.toISOString(),

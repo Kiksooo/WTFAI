@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db/index.js';
+import { ensurePublicUrl } from '../services/storage.js';
 
 const querySchema = z.object({
   offset: z.coerce.number().min(0).default(0),
@@ -26,8 +27,8 @@ export const feedRoutes: FastifyPluginAsync = async (app) => {
       const items = videos.map((v) => ({
         id: v.id,
         prompt: v.prompt,
-        videoUrl: v.videoUrl,
-        previewUrl: v.previewUrl,
+        videoUrl: ensurePublicUrl(v.videoUrl) ?? v.videoUrl,
+        previewUrl: ensurePublicUrl(v.previewUrl) ?? v.previewUrl,
         likesCount: v.likesCount,
         viewsCount: v.viewsCount,
         createdAt: v.createdAt.toISOString(),

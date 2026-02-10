@@ -26,6 +26,14 @@ export function getPublicUrl(relativePath: string): string {
   return `${config.baseUrl}/static/${normalized}`;
 }
 
+/** Подставляет текущий baseUrl в сохранённый URL (исправляет старые записи с localhost). */
+export function ensurePublicUrl(url: string | null): string | null {
+  if (!url?.trim()) return null;
+  const pathMatch = /\/static\/[^\s]+/.exec(url);
+  if (pathMatch) return `${config.baseUrl}${pathMatch[0]}`;
+  return url;
+}
+
 /** Всегда возвращает абсолютный путь, чтобы FFmpeg и другие процессы находили файлы при любом cwd. */
 export function getAbsolutePath(relativePath: string): string {
   return path.resolve(config.storagePath, relativePath);
