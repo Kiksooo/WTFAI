@@ -12,8 +12,8 @@ export const config = {
   groqApiKey: process.env.GROQ_API_KEY ?? '',
   /** Replicate — бесплатный старт для картинок (SDXL). Опционально, если нет OpenAI. */
   replicateApiToken: process.env.REPLICATE_API_TOKEN ?? '',
-  /** В production (Railway и т.д.) по умолчанию /tmp/uploads — образ часто read-only, кроме /tmp */
-  storagePath: process.env.STORAGE_PATH ?? (process.env.NODE_ENV === 'production' ? '/tmp/uploads' : './uploads'),
+  /** Railway и др.: образ read-only, пишем в /tmp. Локально — ./uploads */
+  storagePath: process.env.STORAGE_PATH ?? (process.env.RAILWAY_ENVIRONMENT != null ? '/tmp/uploads' : './uploads'),
   baseUrl: process.env.BASE_URL ?? 'http://localhost:3000',
   dailyLimitFree: parseInt(process.env.DAILY_LIMIT_FREE ?? '2', 10),
   dailyLimitPremium: parseInt(process.env.DAILY_LIMIT_PREMIUM ?? '20', 10),

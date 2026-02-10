@@ -4,9 +4,11 @@ import fs from 'fs/promises';
 import type { Scene } from '../ai/types.js';
 import { getAbsolutePath } from '../storage.js';
 
+const FFMPEG_PATH = process.platform === 'linux' ? '/usr/bin/ffmpeg' : 'ffmpeg';
+
 function runFfmpeg(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    execFile('ffmpeg', args, (err, _stdout, stderr) => {
+    execFile(FFMPEG_PATH, args, (err, _stdout, stderr) => {
       if (err) {
         const stderrStr = stderr ? String(stderr).trim() : '';
         const msg = stderrStr ? `${err.message}\n${stderrStr}` : err.message;
